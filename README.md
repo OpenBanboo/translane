@@ -7,6 +7,7 @@ We are happy to introduce some code examples that you can use for your CS230 pro
 
 ```
 README.md
+detr_demo.ipynb
 pytorch/
     vision/
         README.md
@@ -14,4 +15,16 @@ pytorch/
         README.md
 ```
 
-You'll find a README.md in each sub-directory.
+Setup virtual environment for DETR demo:
+```
+conda create --name translane
+conda activate translane
+conda install -c anaconda pillow
+conda install pytorch==1.6.0 torchvision==0.7.0 -c pytorch
+conda install matplotlib requests
+```
+
+Run DETR demo:
+```
+jupyter notebook
+```
