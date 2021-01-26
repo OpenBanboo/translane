@@ -1,4 +1,4 @@
-# CS230 Project
+# TransLane
 
 [Tutorials](https://cs230-stanford.github.io)
 
