@@ -1,225 +1,227 @@
-import os
+# Use most of the settings same as LSTR: https://github.com/liuruijin17/LSTR
+
 import numpy as np
+import os
 
 class Configuration:
     def __init__(self):
-        self._configs = {}
-        self._configs["dataset"] = None
-        self._configs["sampling_function"] = "kp_detection"
+        # Settings dictionary
+        self._settings = {}
+        self._settings["dataset"] = None
+        self._settings["sampling_function"] = "kp_detection"
+
+        # Random generator settings
+        self._settings["data_rng"] = np.random.RandomState(123)
+        self._settings["nnet_rng"] = np.random.RandomState(317)
+
+        # Dir settings
+        self._settings["data_dir"]   = "./data"
+        self._settings["cache_dir"] = "./cache"
+        self._settings["config_dir"] = "./config"
+        self._settings["result_dir"] = "./results"
 
         # Training Config
-        self._configs["display"]           = 5
-        self._configs["snapshot"]          = 5000
-        self._configs["stepsize"]          = 450000
-        self._configs["learning_rate"]     = 0.00025
-        self._configs["decay_rate"]        = 10
-        self._configs["max_iter"]          = 500000
-        self._configs["val_iter"]          = 100
-        self._configs["batch_size"]        = 1
-        self._configs["snapshot_name"]     = None
-        self._configs["prefetch_size"]     = 100
-        self._configs["weight_decay"]      = False
-        self._configs["weight_decay_rate"] = 1e-5
-        self._configs["weight_decay_type"] = "l2"
-        self._configs["pretrain"]          = None
-        self._configs["opt_algo"]          = "adam"
-        self._configs["chunk_sizes"]       = None
-        self._configs["use_crop"]          = False
+        self._settings["display"]           = 5
+        self._settings["snapshot"]          = 5000
+        self._settings["stepsize"]          = 450000
+        self._settings["learning_rate"]     = 0.00025
+        self._settings["decay_rate"]        = 10
+        self._settings["max_iter"]          = 500000
+        self._settings["val_iter"]          = 100
+        self._settings["batch_size"]        = 1
+        self._settings["snapshot_name"]     = None
+        self._settings["prefetch_size"]     = 100
+        self._settings["weight_decay"]      = False
+        self._settings["weight_decay_rate"] = 1e-5
+        self._settings["weight_decay_type"] = "l2"
+        self._settings["pretrain"]          = None
+        self._settings["opt_algo"]          = "adam"
+        self._settings["chunk_sizes"]       = None
+        self._settings["use_crop"]          = False
 
-        # Directories
-        self._configs["data_dir"]   = "./data"
-        self._configs["cache_dir"] = "./cache"
+        # Training/Validation/Test Dataset Split settings
+        self._settings["train_split"] = "trainval"
+        self._settings["val_split"]   = "minival"
+        self._settings["test_split"]  = "testdev"
 
-        self._configs["config_dir"] = "./config"
-        self._configs["result_dir"] = "./results"
+        # Settings for MSDETR Model
+        self._settings["res_layers"] = [2, 2, 2, 2]
+        self._settings["res_dims"] = [64, 128, 256, 512]
+        self._settings["res_strides"] = [1, 2, 2, 2]
+        self._settings["attn_dim"] = 64
+        self._settings["dim_feedforward"] = 4 * 64
 
-        # Split
-        self._configs["train_split"] = "trainval"
-        self._configs["val_split"]   = "minival"
-        self._configs["test_split"]  = "testdev"
+        self._settings["drop_out"] = 0.1
+        self._settings["num_heads"] = 8
+        self._settings["enc_layers"] = 6
+        self._settings["dec_layers"] = 6
+        self._settings["lsp_dim"] = 8
+        self._settings["mlp_layers"] = 3
 
+        self._settings["aux_loss"] = True
+        self._settings["pos_type"] = 'sine'
+        self._settings["pre_norm"] = False
+        self._settings["return_intermediate"] = True
 
-        # Rng
-        self._configs["data_rng"] = np.random.RandomState(123)
-        self._configs["nnet_rng"] = np.random.RandomState(317)
+        self._settings["block"] = "BasicBlock"
+        self._settings["lane_categories"] = 2
 
-        # MSDETR Model Setting
-        self._configs["res_layers"] = [2, 2, 2, 2]
-        self._configs["res_dims"] = [64, 128, 256, 512]
-        self._configs["res_strides"] = [1, 2, 2, 2]
-        self._configs["attn_dim"] = 64
-        self._configs["dim_feedforward"] = 4 * 64
-
-        self._configs["drop_out"] = 0.1
-        self._configs["num_heads"] = 8
-        self._configs["enc_layers"] = 6
-        self._configs["dec_layers"] = 6
-        self._configs["lsp_dim"] = 8
-        self._configs["mlp_layers"] = 3
-
-        self._configs["aux_loss"] = True
-        self._configs["pos_type"] = 'sine'
-        self._configs["pre_norm"] = False
-        self._configs["return_intermediate"] = True
-
-        self._configs["block"] = "BasicBlock"
-        self._configs["lane_categories"] = 2
-
-        self._configs["num_queries"] = 100
+        self._settings["num_queries"] = 100
 
         # LaneDetection Setting
-        self._configs["max_lanes"] = None
+        self._settings["max_lanes"] = 6
 
+    # class properties
     @property
     def max_lanes(self):
-        return self._configs["max_lanes"]
+        return self._settings["max_lanes"]
 
     @property
     def num_queries(self):
-        return self._configs["num_queries"]
+        return self._settings["num_queries"]
 
     @property
     def lane_categories(self):
-        return self._configs["lane_categories"]
+        return self._settings["lane_categories"]
 
     @property
     def block(self):
-        return self._configs["block"]
+        return self._settings["block"]
 
     @property
     def return_intermediate(self):
-        return self._configs["return_intermediate"]
+        return self._settings["return_intermediate"]
 
     @property
     def pre_norm(self):
-        return self._configs["pre_norm"]
+        return self._settings["pre_norm"]
 
     @property
     def pos_type(self):
-        return self._configs["pos_type"]
+        return self._settings["pos_type"]
 
     @property
     def aux_loss(self):
-        return self._configs["aux_loss"]
+        return self._settings["aux_loss"]
 
     @property
     def mlp_layers(self):
-        return self._configs["mlp_layers"]
+        return self._settings["mlp_layers"]
 
     @property
     def lsp_dim(self):
-        return self._configs["lsp_dim"]
+        return self._settings["lsp_dim"]
 
     @property
     def dec_layers(self):
-        return self._configs["dec_layers"]
+        return self._settings["dec_layers"]
 
     @property
     def enc_layers(self):
-        return self._configs["enc_layers"]
+        return self._settings["enc_layers"]
 
     @property
     def num_heads(self):
-        return self._configs["num_heads"]
+        return self._settings["num_heads"]
 
     @property
     def drop_out(self):
-        return self._configs["drop_out"]
+        return self._settings["drop_out"]
 
     @property
     def dim_feedforward(self):
-        return self._configs["dim_feedforward"]
+        return self._settings["dim_feedforward"]
 
     @property
     def attn_dim(self):
-        return self._configs["attn_dim"]
+        return self._settings["attn_dim"]
 
     @property
     def res_strides(self):
-        return self._configs["res_strides"]
+        return self._settings["res_strides"]
 
     @property
     def res_dims(self):
-        return self._configs["res_dims"]
+        return self._settings["res_dims"]
 
     @property
     def res_layers(self):
-        return self._configs["res_layers"]
+        return self._settings["res_layers"]
 
     @property
     def chunk_sizes(self):
-        return self._configs["chunk_sizes"]
+        return self._settings["chunk_sizes"]
 
     @property
     def use_crop(self):
-        return self._configs["use_crop"]
+        return self._settings["use_crop"]
 
     @property
     def train_split(self):
-        return self._configs["train_split"]
+        return self._settings["train_split"]
 
     @property
     def val_split(self):
-        return self._configs["val_split"]
+        return self._settings["val_split"]
 
     @property
     def test_split(self):
-        return self._configs["test_split"]
+        return self._settings["test_split"]
 
     @property
     def full(self):
-        return self._configs
+        return self._settings
 
     @property
     def sampling_function(self):
-        return self._configs["sampling_function"]
+        return self._settings["sampling_function"]
 
     @property
     def data_rng(self):
-        return self._configs["data_rng"]
+        return self._settings["data_rng"]
 
     @property
     def nnet_rng(self):
-        return self._configs["nnet_rng"]
+        return self._settings["nnet_rng"]
 
     @property
     def opt_algo(self):
-        return self._configs["opt_algo"]
+        return self._settings["opt_algo"]
 
     @property
     def weight_decay_type(self):
-        return self._configs["weight_decay_type"]
+        return self._settings["weight_decay_type"]
 
     @property
     def prefetch_size(self):
-        return self._configs["prefetch_size"]
+        return self._settings["prefetch_size"]
 
     @property
     def pretrain(self):
-        return self._configs["pretrain"]
+        return self._settings["pretrain"]
 
     @property
     def weight_decay_rate(self):
-        return self._configs["weight_decay_rate"]
+        return self._settings["weight_decay_rate"]
 
     @property
     def weight_decay(self):
-        return self._configs["weight_decay"]
+        return self._settings["weight_decay"]
 
     @property
     def result_dir(self):
-        result_dir = os.path.join(self._configs["result_dir"], self.snapshot_name)
+        result_dir = os.path.join(self._settings["result_dir"], self.snapshot_name)
         if not os.path.exists(result_dir):
             os.makedirs(result_dir)
         return result_dir
 
     @property
     def dataset(self):
-        return self._configs["dataset"]
+        return self._settings["dataset"]
 
     @property
     def snapshot_name(self):
-        return self._configs["snapshot_name"]
+        return self._settings["snapshot_name"]
 
     @property
     def snapshot_dir(self):
@@ -247,57 +249,57 @@ class Configuration:
 
     @property
     def config_dir(self):
-        return self._configs["config_dir"]
+        return self._settings["config_dir"]
 
     @property
     def batch_size(self):
-        return self._configs["batch_size"]
+        return self._settings["batch_size"]
 
     @property
     def max_iter(self):
-        return self._configs["max_iter"]
+        return self._settings["max_iter"]
 
     @property
     def learning_rate(self):
-        return self._configs["learning_rate"]
+        return self._settings["learning_rate"]
 
     @property
     def decay_rate(self):
-        return self._configs["decay_rate"]
+        return self._settings["decay_rate"]
 
     @property
     def stepsize(self):
-        return self._configs["stepsize"]
+        return self._settings["stepsize"]
 
     @property
     def snapshot(self):
-        return self._configs["snapshot"]
+        return self._settings["snapshot"]
 
     @property
     def display(self):
-        return self._configs["display"]
+        return self._settings["display"]
 
     @property
     def val_iter(self):
-        return self._configs["val_iter"]
+        return self._settings["val_iter"]
 
     @property
     def data_dir(self):
-        return self._configs["data_dir"]
+        return self._settings["data_dir"]
 
     @property
     def cache_dir(self):
-        if not os.path.exists(self._configs["cache_dir"]):
-            os.makedirs(self._configs["cache_dir"])
-        return self._configs["cache_dir"]
+        if not os.path.exists(self._settings["cache_dir"]):
+            os.makedirs(self._settings["cache_dir"])
+        return self._settings["cache_dir"]
 
     @property
     def box_cache_dir(self):
-        return self._configs['box_cache_dir']
+        return self._settings['box_cache_dir']
 
     def update_config(self, new):
         for key in new:
-            if key in self._configs:
-                self._configs[key] = new[key]
+            if key in self._settings:
+                self._settings[key] = new[key]
 
 setup_configurations = Configuration()
