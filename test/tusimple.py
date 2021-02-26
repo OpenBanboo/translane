@@ -11,7 +11,7 @@ from torch import nn
 import matplotlib.pyplot as plt
 from copy import deepcopy
 from tqdm import tqdm
-from configuration import system_configs
+from configuration import setup_configurations
 
 from util import crop_image, normalize_
 
@@ -220,5 +220,5 @@ def kp_detection(db, nnet, result_dir, debug=False, evaluator=None, repeat=1,
 
 def testing(db, nnet, result_dir, debug=False, evaluator=None, repeat=1,
             debugEnc=False, debugDec=False):
-    return globals()[system_configs.sampling_function](db, nnet, result_dir, debug=debug, evaluator=evaluator,
+    return globals()[setup_configurations.sampling_function](db, nnet, result_dir, debug=debug, evaluator=evaluator,
                                                        repeat=repeat, isEncAttn=debugEnc, isDecAttn=debugDec)

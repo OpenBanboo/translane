@@ -2,7 +2,7 @@ import os
 import h5py
 import numpy as np
 
-from configuration import system_configs
+from configuration import setup_configurations
 
 class BASE(object):
     def __init__(self):

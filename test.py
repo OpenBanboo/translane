@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 import os
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import json
 import torch
 import pprint
@@ -13,11 +11,11 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 
-from configuration import system_configs
+from configuration import setup_configurations
 from factory.network_factory import NetworkFactory
 from database.datasets import datasets
 from database.utils.evaluator import Evaluator
-
+from util.general_utils import create_directories
 torch.backends.cudnn.benchmark = False
 
 def parse_args():
@@ -43,22 +41,17 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-def make_dirs(directories):
-    for directory in directories:
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
 def test(db, split, testiter,
          debug=False, suffix=None, modality=None, image_root=None, batch=1,
          debugEnc=False, debugDec=False):
-    result_dir = system_configs.result_dir
+    result_dir = setup_configurations.result_dir
     result_dir = os.path.join(result_dir, str(testiter), split)
 
     if suffix is not None:
         result_dir = os.path.join(result_dir, suffix)
 
-    make_dirs([result_dir])
-    test_iter = system_configs.max_iter if testiter is None else testiter
+    create_directories([result_dir])
+    test_iter = setup_configurations.max_iter if testiter is None else testiter
     print("loading parameters at iteration: {}".format(test_iter))
 
     print("building neural network...")
@@ -94,20 +87,20 @@ if __name__ == "__main__":
     args = parse_args()
 
     if args.suffix is None:
-        cfg_file = os.path.join(system_configs.config_dir, args.cfg_file + ".json")
+        cfg_file = os.path.join(setup_configurations.config_dir, args.cfg_file + ".json")
     else:
-        cfg_file = os.path.join(system_configs.config_dir, args.cfg_file + "-{}.json".format(args.suffix))
+        cfg_file = os.path.join(setup_configurations.config_dir, args.cfg_file + "-{}.json".format(args.suffix))
     print("cfg_file: {}".format(cfg_file))
 
     with open(cfg_file, "r") as f:
         configs = json.load(f)
             
     configs["system"]["snapshot_name"] = args.cfg_file
-    system_configs.update_config(configs["system"])
+    setup_configurations.update_config(configs["system"])
 
-    train_split = system_configs.train_split
-    val_split   = system_configs.val_split
-    test_split  = system_configs.test_split
+    train_split = setup_configurations.train_split
+    val_split   = setup_configurations.val_split
+    test_split  = setup_configurations.test_split
 
     split = {
         "training": train_split,
@@ -116,16 +109,10 @@ if __name__ == "__main__":
     }[args.split]
 
     print("loading all datasets...")
-    dataset = system_configs.dataset
+    dataset = setup_configurations.dataset
     print("split: {}".format(split))  # test
 
     testing_db = datasets[dataset](configs["db"], split)
-
-    # print("system config...")
-    # pprint.pprint(system_configs.full)
-    #
-    # print("db config...")
-    # pprint.pprint(testing_db.configs)
 
     test(testing_db,
          args.split,

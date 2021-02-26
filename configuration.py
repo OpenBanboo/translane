@@ -1,7 +1,7 @@
 import os
 import numpy as np
 
-class Config:
+class Configuration:
     def __init__(self):
         self._configs = {}
         self._configs["dataset"] = None
@@ -300,4 +300,4 @@ class Config:
             if key in self._configs:
                 self._configs[key] = new[key]
 
-system_configs = Config()
+setup_configurations = Configuration()

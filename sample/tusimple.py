@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import torch
-from configuration import system_configs
+from configuration import setup_configurations
 from util import crop_image, normalize_, color_jittering_, lighting_
 from imgaug.augmentables.lines import LineString, LineStringsOnImage
 
@@ -13,8 +13,8 @@ IMAGENET_MEAN = np.array([0.485, 0.456, 0.406])
 IMAGENET_STD = np.array([0.229, 0.224, 0.225])
 
 def kp_detection(db, k_ind):
-    data_rng     = system_configs.data_rng
-    batch_size   = system_configs.batch_size
+    data_rng     = setup_configurations.data_rng
+    batch_size   = setup_configurations.batch_size
     input_size   = db.configs["input_size"]
     lighting     = db.configs["lighting"]
     rand_color   = db.configs["rand_color"]
@@ -77,6 +77,6 @@ def kp_detection(db, k_ind):
 
 
 def sample_data(db, k_ind):
-    return globals()[system_configs.sampling_function](db, k_ind)
+    return globals()[setup_configurations.sampling_function](db, k_ind)
 
 

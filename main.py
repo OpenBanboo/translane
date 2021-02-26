@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-# Modified by Fang Lin (flin4@stanford.edu)
+# Modified based on DETR (https://github.com/facebookresearch/detr)
+# and LSTR (https://github.com/liuruijin17/LSTR)
+# by Fang Lin (flin4@stanford.edu)
+
 import os
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import argparse
 import datetime
 import json
@@ -22,87 +22,51 @@ import traceback
 import util.misc as utils
 from tqdm import tqdm
 from util import stdout_to_tqdm
-from configuration import system_configs
+from configuration import setup_configurations
 from factory.network_factory import NetworkFactory
 from torch.multiprocessing import Process, Queue, Pool
 from database.datasets import datasets
 import models.py_utils.misc as utils
+from util.general_utils import create_directories, pin_memory, init_parallel_jobs, prefetch_data
 #from datasets import build_dataset, get_coco_api_from_dataset
 #from engine import evaluate, train_one_epoch
 #from models import build_model
 
-torch.backends.cudnn.enabled   = True
-torch.backends.cudnn.benchmark = True
-
 def parse_args():
-    parser = argparse.ArgumentParser(description="Train CornerNet")
-    parser.add_argument("cfg_file", help="config file", type=str)
-    parser.add_argument("--iter", dest="start_iter",
-                        help="train at iteration i",
+    parser = argparse.ArgumentParser(description="Train Transformer Network")
+    # Model parameters
+    parser.add_argument("configuration", help="Configuration File", type=str)
+    # Number o
+    parser.add_argument("-b", dest="begin_iteration",
+                        help="Begin to train at iteration b using pretrained model",
                         default=0, type=int)
-    parser.add_argument("--threads", dest="threads", default=4, type=int)
+    parser.add_argument("-t", dest="num_threads", default=8, type=int)
     parser.add_argument("--freeze", action="store_true")
 
     args = parser.parse_args()
     return args
 
-def make_dirs(directories):
-    for directory in directories:
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
-def prefetch_data(db, queue, sample_data):
-    ind = 0
-    print("start prefetching data...")
-    np.random.seed(os.getpid())
-    while True:
-        try:
-            data, ind = sample_data(db, ind)
-            queue.put(data)
-        except Exception as e:
-            traceback.print_exc()
-            raise e
-
-def pin_memory(data_queue, pinned_data_queue, sema):
-    while True:
-        data = data_queue.get()
-
-        data["xs"] = [x.pin_memory() for x in data["xs"]]
-        data["ys"] = [y.pin_memory() for y in data["ys"]]
-
-        pinned_data_queue.put(data)
-
-        if sema.acquire(blocking=False):
-            return
-
-def init_parallel_jobs(dbs, queue, fn):
-    tasks = [Process(target=prefetch_data, args=(db, queue, fn)) for db in dbs]
-    for task in tasks:
-        task.daemon = True
-        task.start()
-    return tasks
-
-def train(training_dbs, validation_db, start_iter=0, freeze=False):
-    learning_rate    = system_configs.learning_rate
-    max_iteration    = system_configs.max_iter
-    pretrained_model = system_configs.pretrain
-    snapshot         = system_configs.snapshot
-    val_iter         = system_configs.val_iter
-    display          = system_configs.display
-    decay_rate       = system_configs.decay_rate
-    stepsize         = system_configs.stepsize
-    batch_size       = system_configs.batch_size
+def train(training_dbs, validation_db, begin_iteration=0, freeze=False):
+    learning_rate    = setup_configurations.learning_rate
+    max_iteration    = setup_configurations.max_iter
+    pretrained_model = setup_configurations.pretrain
+    snapshot         = setup_configurations.snapshot
+    val_iter         = setup_configurations.val_iter
+    display          = setup_configurations.display
+    decay_rate       = setup_configurations.decay_rate
+    stepsize         = setup_configurations.stepsize
+    batch_size       = setup_configurations.batch_size
 
     # getting the size of each database
     training_size   = len(training_dbs[0].db_inds)
     validation_size = len(validation_db.db_inds)
 
     # queues storing data for training
-    training_queue   = Queue(system_configs.prefetch_size) # 5
+    training_queue   = Queue(setup_configurations.prefetch_size) # 5
     validation_queue = Queue(5)
 
     # queues storing pinned data for training
-    pinned_training_queue   = queue.Queue(system_configs.prefetch_size) # 5
+    pinned_training_queue   = queue.Queue(setup_configurations.prefetch_size) # 5
     pinned_validation_queue = queue.Queue(5)
 
     # load data sampling function
@@ -139,12 +103,12 @@ def train(training_dbs, validation_db, start_iter=0, freeze=False):
         print("loading from pretrained model")
         nnet.load_pretrained_params(pretrained_model)
 
-    if start_iter:
-        learning_rate /= (decay_rate ** (start_iter // stepsize))
+    if begin_iteration:
+        learning_rate /= (decay_rate ** (begin_iteration // stepsize))
 
-        nnet.load_params(start_iter)
+        nnet.load_params(begin_iteration)
         nnet.set_lr(learning_rate)
-        print("training starts from iteration {} with learning_rate {}".format(start_iter + 1, learning_rate))
+        print("training starts from iteration {} with learning_rate {}".format(begin_iteration + 1, learning_rate))
     else:
         nnet.set_lr(learning_rate)
 
@@ -157,7 +121,7 @@ def train(training_dbs, validation_db, start_iter=0, freeze=False):
     metric_logger.add_meter('class_error', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
 
     with stdout_to_tqdm() as save_stdout:
-        for iteration in metric_logger.log_every(tqdm(range(start_iter + 1, max_iteration + 1),
+        for iteration in metric_logger.log_every(tqdm(range(begin_iteration + 1, max_iteration + 1),
                                                       file=save_stdout, ncols=67),
                                                  print_freq=10, header=header):
 
@@ -212,33 +176,28 @@ def train(training_dbs, validation_db, start_iter=0, freeze=False):
 if __name__ == "__main__":
     args = parse_args()
 
-    cfg_file = os.path.join(system_configs.config_dir, args.cfg_file + ".json")
-    print(cfg_file)
-    with open(cfg_file, "r") as f:
-        configs = json.load(f)
+    # Fetch the json configuration file
+    configuration = os.path.join(setup_configurations.config_dir, args.configuration + ".json")
 
-    configs["system"]["snapshot_name"] = args.cfg_file  # CornerNet
-    system_configs.update_config(configs["system"])
+    with open(configuration, "r") as f:
+        configs_dict = json.load(f)
 
-    train_split = system_configs.train_split
-    val_split   = system_configs.val_split
+    configs_dict["system"]["snapshot_name"] = args.configuration
+    setup_configurations.update_config(configs_dict["system"])
 
-    dataset = system_configs.dataset  # MSCOCO | FVV
+    train_split = setup_configurations.train_split
+    val_split   = setup_configurations.val_split
+
+    dataset = setup_configurations.dataset  # MSCOCO | FVV
     print("loading all datasets {}...".format(dataset))
 
-    threads = args.threads  # 4 every 4 epoch shuffle the indices
-    print("using {} threads".format(threads))
-    training_dbs  = [datasets[dataset](configs["db"], train_split) for _ in range(threads)]
-    validation_db = datasets[dataset](configs["db"], val_split)
-
-    # print("system config...")
-    # pprint.pprint(system_configs.full)
-    #
-    # print("db config...")
-    # pprint.pprint(training_dbs[0].configs)
+    num_threads = args.num_threads  # 4 every 4 epoch shuffle the indices
+    print("using {} threads".format(num_threads))
+    training_dbs  = [datasets[dataset](configs_dict["db"], train_split) for _ in range(num_threads)]
+    validation_db = datasets[dataset](configs_dict["db"], val_split)
 
     print("len of training db: {}".format(len(training_dbs[0].db_inds)))
     print("len of testing db: {}".format(len(validation_db.db_inds)))
 
     print("freeze the pretrained network: {}".format(args.freeze))
-    train(training_dbs, validation_db, args.start_iter, args.freeze) # 0
+    train(training_dbs, validation_db, args.begin_iteration, args.freeze) # 0

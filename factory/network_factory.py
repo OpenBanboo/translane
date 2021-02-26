@@ -3,7 +3,7 @@ import torch
 import importlib
 import torch.nn as nn
 from thop import profile, clever_format
-from configuration import system_configs
+from configuration import setup_configurations
 from models.py_utils.data_parallel import DataParallel
 
 torch.manual_seed(317)
@@ -42,14 +42,14 @@ class NetworkFactory(object):
     def __init__(self, flag=False):
         super(NetworkFactory, self).__init__()
 
-        module_file = "models.{}".format(system_configs.snapshot_name)
+        module_file = "models.{}".format(setup_configurations.snapshot_name)
         # print("module_file: {}".format(module_file)) # models.CornerNet
         nnet_module = importlib.import_module(module_file)
 
         self.model   = DummyModule(nnet_module.model(flag=flag))
         self.loss    = nnet_module.loss()
         self.network = Network(self.model, self.loss)
-        self.network = DataParallel(self.network, chunk_sizes=system_configs.chunk_sizes)
+        self.network = DataParallel(self.network, chunk_sizes=setup_configurations.chunk_sizes)
         self.flag    = flag
 
         # Count total parameters
@@ -69,20 +69,20 @@ class NetworkFactory(object):
         print('MACs: {}'.format(macs))
 
 
-        if system_configs.opt_algo == "adam":
+        if setup_configurations.opt_algo == "adam":
             self.optimizer = torch.optim.Adam(
                 filter(lambda p: p.requires_grad, self.model.parameters())
             )
-        elif system_configs.opt_algo == "sgd":
+        elif setup_configurations.opt_algo == "sgd":
             self.optimizer = torch.optim.SGD(
                 filter(lambda p: p.requires_grad, self.model.parameters()),
-                lr=system_configs.learning_rate, 
+                lr=setup_configurations.learning_rate,
                 momentum=0.9, weight_decay=0.0001
             )
-        elif system_configs.opt_algo == 'adamW':
+        elif setup_configurations.opt_algo == 'adamW':
             self.optimizer = torch.optim.AdamW(
                 filter(lambda p: p.requires_grad, self.model.parameters()),
-                lr=system_configs.learning_rate,
+                lr=setup_configurations.learning_rate,
                 weight_decay=1e-4
             )
         else:
@@ -162,7 +162,7 @@ class NetworkFactory(object):
             self.model.load_state_dict(params)
 
     def load_params(self, iteration, is_bbox_only=False):
-        cache_file = system_configs.snapshot_file.format(iteration)
+        cache_file = setup_configurations.snapshot_file.format(iteration)
 
         with open(cache_file, "rb") as f:
             params = torch.load(f)
@@ -177,7 +177,7 @@ class NetworkFactory(object):
 
 
     def save_params(self, iteration):
-        cache_file = system_configs.snapshot_file.format(iteration)
+        cache_file = setup_configurations.snapshot_file.format(iteration)
         print("saving model to {}".format(cache_file))
         with open(cache_file, "wb") as f:
             params = self.model.state_dict()

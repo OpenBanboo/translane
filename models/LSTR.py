@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from .py_utils import kp, AELoss
-from configuration import system_configs
+from configuration import setup_configurations
 
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
     """3x3 convolution with padding"""
@@ -12,6 +12,7 @@ def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
 def conv1x1(in_planes, out_planes, stride=1):
     """1x1 convolution"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
+
 class BasicBlock(nn.Module):
     expansion = 1
 
@@ -109,32 +110,32 @@ class model(kp):
         res152 Bottleneck [3, 8, 36, 3]
         """
 
-        layers          = system_configs.res_layers
-        res_dims        = system_configs.res_dims
-        res_strides     = system_configs.res_strides
-        attn_dim        = system_configs.attn_dim
-        dim_feedforward = system_configs.dim_feedforward
+        layers          = setup_configurations.res_layers
+        res_dims        = setup_configurations.res_dims
+        res_strides     = setup_configurations.res_strides
+        attn_dim        = setup_configurations.attn_dim
+        dim_feedforward = setup_configurations.dim_feedforward
 
-        num_queries = system_configs.num_queries  # number of joints
-        drop_out    = system_configs.drop_out
-        num_heads   = system_configs.num_heads
-        enc_layers  = system_configs.enc_layers
-        dec_layers  = system_configs.dec_layers
-        lsp_dim     = system_configs.lsp_dim
-        mlp_layers  = system_configs.mlp_layers
-        lane_cls     = system_configs.lane_categories
+        num_queries = setup_configurations.num_queries  # number of joints
+        drop_out    = setup_configurations.drop_out
+        num_heads   = setup_configurations.num_heads
+        enc_layers  = setup_configurations.enc_layers
+        dec_layers  = setup_configurations.dec_layers
+        lsp_dim     = setup_configurations.lsp_dim
+        mlp_layers  = setup_configurations.mlp_layers
+        lane_cls     = setup_configurations.lane_categories
 
-        aux_loss = system_configs.aux_loss
-        pos_type = system_configs.pos_type
-        pre_norm = system_configs.pre_norm
-        return_intermediate = system_configs.return_intermediate
+        aux_loss = setup_configurations.aux_loss
+        pos_type = setup_configurations.pos_type
+        pre_norm = setup_configurations.pre_norm
+        return_intermediate = setup_configurations.return_intermediate
 
-        if system_configs.block == 'BasicBlock':
+        if setup_configurations.block == 'BasicBlock':
             block = BasicBlock
-        elif system_configs.block == 'BottleNeck':
+        elif setup_configurations.block == 'BottleNeck':
             block = Bottleneck
         else:
-            raise ValueError('invalid system_configs.block: {}'.format(system_configs.block))
+            raise ValueError('invalid setup_configurations.block: {}'.format(setup_configurations.block))
 
         super(model, self).__init__(
             flag=flag,
@@ -161,9 +162,9 @@ class model(kp):
 class loss(AELoss):
     def __init__(self):
         super(loss, self).__init__(
-            debug_path=system_configs.result_dir,
-            aux_loss=system_configs.aux_loss,
-            num_classes=system_configs.lane_categories,
-            dec_layers=system_configs.dec_layers
+            debug_path=setup_configurations.result_dir,
+            aux_loss=setup_configurations.aux_loss,
+            num_classes=setup_configurations.lane_categories,
+            dec_layers=setup_configurations.dec_layers
         )
 

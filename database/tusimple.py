@@ -10,9 +10,8 @@ import imgaug.augmenters as iaa
 from imgaug.augmenters import Resize
 from imgaug.augmentables.lines import LineString, LineStringsOnImage
 
-
 from database.detection import DETECTION
-from configuration import system_configs
+from configuration import setup_configurations
 from database.utils.lane import LaneEval
 from database.utils.metric import eval_json
 
@@ -43,10 +42,10 @@ IMAGENET_STD = np.array([0.229, 0.224, 0.225])
 class TUSIMPLE(DETECTION):
     def __init__(self, db_config, split):
         super(TUSIMPLE, self).__init__(db_config)
-        data_dir   = system_configs.data_dir
-        # result_dir = system_configs.result_dir
-        cache_dir   = system_configs.cache_dir
-        max_lanes   = system_configs.max_lanes
+        data_dir   = setup_configurations.data_dir
+        # result_dir = setup_configurations.result_dir
+        cache_dir   = setup_configurations.cache_dir
+        max_lanes   = setup_configurations.max_lanes
         self.metric = 'default'
         inp_h, inp_w = db_config['input_size']
 
