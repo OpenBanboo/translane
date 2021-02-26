@@ -1,248 +1,244 @@
+#!/usr/bin/env python
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+# Modified by Fang Lin (flin4@stanford.edu)
+import os
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import argparse
 import datetime
 import json
 import random
 import time
 from pathlib import Path
-
+import queue
+import pprint
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, DistributedSampler
-
+import importlib
 import datasets
+import threading
+import traceback
 import util.misc as utils
-from datasets import build_dataset, get_coco_api_from_dataset
-from engine import evaluate, train_one_epoch
-from models import build_model
+from tqdm import tqdm
+from util import stdout_to_tqdm
+from configuration import system_configs
+from factory.network_factory import NetworkFactory
+from torch.multiprocessing import Process, Queue, Pool
+from database.datasets import datasets
+import models.py_utils.misc as utils
+#from datasets import build_dataset, get_coco_api_from_dataset
+#from engine import evaluate, train_one_epoch
+#from models import build_model
 
+torch.backends.cudnn.enabled   = True
+torch.backends.cudnn.benchmark = True
 
-def get_args_parser():
-    parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
-    parser.add_argument('--lr', default=1e-4, type=float)
-    parser.add_argument('--lr_backbone', default=1e-5, type=float)
-    parser.add_argument('--batch_size', default=2, type=int)
-    parser.add_argument('--weight_decay', default=1e-4, type=float)
-    parser.add_argument('--epochs', default=300, type=int)
-    parser.add_argument('--lr_drop', default=200, type=int)
-    parser.add_argument('--clip_max_norm', default=0.1, type=float,
-                        help='gradient clipping max norm')
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train CornerNet")
+    parser.add_argument("cfg_file", help="config file", type=str)
+    parser.add_argument("--iter", dest="start_iter",
+                        help="train at iteration i",
+                        default=0, type=int)
+    parser.add_argument("--threads", dest="threads", default=4, type=int)
+    parser.add_argument("--freeze", action="store_true")
 
-    # Model parameters
-    parser.add_argument('--frozen_weights', type=str, default=None,
-                        help="Path to the pretrained model. If set, only the mask head will be trained")
-    # * Backbone
-    parser.add_argument('--backbone', default='resnet50', type=str,
-                        help="Name of the convolutional backbone to use")
-    parser.add_argument('--dilation', action='store_true',
-                        help="If true, we replace stride with dilation in the last convolutional block (DC5)")
-    parser.add_argument('--position_embedding', default='sine', type=str, choices=('sine', 'learned'),
-                        help="Type of positional embedding to use on top of the image features")
-
-    # * Transformer
-    parser.add_argument('--enc_layers', default=6, type=int,
-                        help="Number of encoding layers in the transformer")
-    parser.add_argument('--dec_layers', default=6, type=int,
-                        help="Number of decoding layers in the transformer")
-    parser.add_argument('--dim_feedforward', default=2048, type=int,
-                        help="Intermediate size of the feedforward layers in the transformer blocks")
-    parser.add_argument('--hidden_dim', default=256, type=int,
-                        help="Size of the embeddings (dimension of the transformer)")
-    parser.add_argument('--dropout', default=0.1, type=float,
-                        help="Dropout applied in the transformer")
-    parser.add_argument('--nheads', default=8, type=int,
-                        help="Number of attention heads inside the transformer's attentions")
-    parser.add_argument('--num_queries', default=100, type=int,
-                        help="Number of query slots")
-    parser.add_argument('--pre_norm', action='store_true')
-
-    # * Segmentation
-    parser.add_argument('--masks', action='store_true',
-                        help="Train segmentation head if the flag is provided")
-
-    # Loss
-    parser.add_argument('--no_aux_loss', dest='aux_loss', action='store_false',
-                        help="Disables auxiliary decoding losses (loss at each layer)")
-    # * Matcher
-    parser.add_argument('--set_cost_class', default=1, type=float,
-                        help="Class coefficient in the matching cost")
-    parser.add_argument('--set_cost_bbox', default=5, type=float,
-                        help="L1 box coefficient in the matching cost")
-    parser.add_argument('--set_cost_giou', default=2, type=float,
-                        help="giou box coefficient in the matching cost")
-    # * Loss coefficients
-    parser.add_argument('--mask_loss_coef', default=1, type=float)
-    parser.add_argument('--dice_loss_coef', default=1, type=float)
-    parser.add_argument('--bbox_loss_coef', default=5, type=float)
-    parser.add_argument('--giou_loss_coef', default=2, type=float)
-    parser.add_argument('--eos_coef', default=0.1, type=float,
-                        help="Relative classification weight of the no-object class")
-
-    # dataset parameters
-    parser.add_argument('--dataset_file', default='coco')
-    parser.add_argument('--coco_path', type=str)
-    parser.add_argument('--coco_panoptic_path', type=str)
-    parser.add_argument('--remove_difficult', action='store_true')
-
-    parser.add_argument('--output_dir', default='',
-                        help='path where to save, empty for no saving')
-    parser.add_argument('--device', default='cuda',
-                        help='device to use for training / testing')
-    parser.add_argument('--seed', default=42, type=int)
-    parser.add_argument('--resume', default='', help='resume from checkpoint')
-    parser.add_argument('--start_epoch', default=0, type=int, metavar='N',
-                        help='start epoch')
-    parser.add_argument('--eval', action='store_true')
-    parser.add_argument('--num_workers', default=2, type=int)
-
-    # distributed training parameters
-    parser.add_argument('--world_size', default=1, type=int,
-                        help='number of distributed processes')
-    parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
-    return parser
-
-
-def main(args):
-    utils.init_distributed_mode(args)
-    print("git:\n  {}\n".format(utils.get_sha()))
-
-    if args.frozen_weights is not None:
-        assert args.masks, "Frozen training is meant for segmentation only"
-    print(args)
-
-    device = torch.device(args.device)
-
-    # fix the seed for reproducibility
-    seed = args.seed + utils.get_rank()
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-
-    model, criterion, postprocessors = build_model(args)
-    model.to(device)
-
-    model_without_ddp = model
-    if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
-        model_without_ddp = model.module
-    n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print('number of params:', n_parameters)
-
-    param_dicts = [
-        {"params": [p for n, p in model_without_ddp.named_parameters() if "backbone" not in n and p.requires_grad]},
-        {
-            "params": [p for n, p in model_without_ddp.named_parameters() if "backbone" in n and p.requires_grad],
-            "lr": args.lr_backbone,
-        },
-    ]
-    optimizer = torch.optim.AdamW(param_dicts, lr=args.lr,
-                                  weight_decay=args.weight_decay)
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, args.lr_drop)
-
-    dataset_train = build_dataset(image_set='train', args=args)
-    dataset_val = build_dataset(image_set='val', args=args)
-
-    if args.distributed:
-        sampler_train = DistributedSampler(dataset_train)
-        sampler_val = DistributedSampler(dataset_val, shuffle=False)
-    else:
-        sampler_train = torch.utils.data.RandomSampler(dataset_train)
-        sampler_val = torch.utils.data.SequentialSampler(dataset_val)
-
-    batch_sampler_train = torch.utils.data.BatchSampler(
-        sampler_train, args.batch_size, drop_last=True)
-
-    data_loader_train = DataLoader(dataset_train, batch_sampler=batch_sampler_train,
-                                   collate_fn=utils.collate_fn, num_workers=args.num_workers)
-    data_loader_val = DataLoader(dataset_val, args.batch_size, sampler=sampler_val,
-                                 drop_last=False, collate_fn=utils.collate_fn, num_workers=args.num_workers)
-
-    if args.dataset_file == "coco_panoptic":
-        # We also evaluate AP during panoptic training, on original coco DS
-        coco_val = datasets.coco.build("val", args)
-        base_ds = get_coco_api_from_dataset(coco_val)
-    else:
-        base_ds = get_coco_api_from_dataset(dataset_val)
-
-    if args.frozen_weights is not None:
-        checkpoint = torch.load(args.frozen_weights, map_location='cpu')
-        model_without_ddp.detr.load_state_dict(checkpoint['model'])
-
-    output_dir = Path(args.output_dir)
-    if args.resume:
-        if args.resume.startswith('https'):
-            checkpoint = torch.hub.load_state_dict_from_url(
-                args.resume, map_location='cpu', check_hash=True)
-        else:
-            checkpoint = torch.load(args.resume, map_location='cpu')
-        model_without_ddp.load_state_dict(checkpoint['model'])
-        if not args.eval and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-            args.start_epoch = checkpoint['epoch'] + 1
-
-    if args.eval:
-        test_stats, coco_evaluator = evaluate(model, criterion, postprocessors,
-                                              data_loader_val, base_ds, device, args.output_dir)
-        if args.output_dir:
-            utils.save_on_master(coco_evaluator.coco_eval["bbox"].eval, output_dir / "eval.pth")
-        return
-
-    print("Start training")
-    start_time = time.time()
-    for epoch in range(args.start_epoch, args.epochs):
-        if args.distributed:
-            sampler_train.set_epoch(epoch)
-        train_stats = train_one_epoch(
-            model, criterion, data_loader_train, optimizer, device, epoch,
-            args.clip_max_norm)
-        lr_scheduler.step()
-        if args.output_dir:
-            checkpoint_paths = [output_dir / 'checkpoint.pth']
-            # extra checkpoint before LR drop and every 100 epochs
-            if (epoch + 1) % args.lr_drop == 0 or (epoch + 1) % 100 == 0:
-                checkpoint_paths.append(output_dir / f'checkpoint{epoch:04}.pth')
-            for checkpoint_path in checkpoint_paths:
-                utils.save_on_master({
-                    'model': model_without_ddp.state_dict(),
-                    'optimizer': optimizer.state_dict(),
-                    'lr_scheduler': lr_scheduler.state_dict(),
-                    'epoch': epoch,
-                    'args': args,
-                }, checkpoint_path)
-
-        test_stats, coco_evaluator = evaluate(
-            model, criterion, postprocessors, data_loader_val, base_ds, device, args.output_dir
-        )
-
-        log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
-                     **{f'test_{k}': v for k, v in test_stats.items()},
-                     'epoch': epoch,
-                     'n_parameters': n_parameters}
-
-        if args.output_dir and utils.is_main_process():
-            with (output_dir / "log.txt").open("a") as f:
-                f.write(json.dumps(log_stats) + "\n")
-
-            # for evaluation logs
-            if coco_evaluator is not None:
-                (output_dir / 'eval').mkdir(exist_ok=True)
-                if "bbox" in coco_evaluator.coco_eval:
-                    filenames = ['latest.pth']
-                    if epoch % 50 == 0:
-                        filenames.append(f'{epoch:03}.pth')
-                    for name in filenames:
-                        torch.save(coco_evaluator.coco_eval["bbox"].eval,
-                                   output_dir / "eval" / name)
-
-    total_time = time.time() - start_time
-    total_time_str = str(datetime.timedelta(seconds=int(total_time)))
-    print('Training time {}'.format(total_time_str))
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser('DETR training and evaluation script', parents=[get_args_parser()])
     args = parser.parse_args()
-    if args.output_dir:
-        Path(args.output_dir).mkdir(parents=True, exist_ok=True)
-    main(args)
+    return args
+
+def make_dirs(directories):
+    for directory in directories:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+def prefetch_data(db, queue, sample_data):
+    ind = 0
+    print("start prefetching data...")
+    np.random.seed(os.getpid())
+    while True:
+        try:
+            data, ind = sample_data(db, ind)
+            queue.put(data)
+        except Exception as e:
+            traceback.print_exc()
+            raise e
+
+def pin_memory(data_queue, pinned_data_queue, sema):
+    while True:
+        data = data_queue.get()
+
+        data["xs"] = [x.pin_memory() for x in data["xs"]]
+        data["ys"] = [y.pin_memory() for y in data["ys"]]
+
+        pinned_data_queue.put(data)
+
+        if sema.acquire(blocking=False):
+            return
+
+def init_parallel_jobs(dbs, queue, fn):
+    tasks = [Process(target=prefetch_data, args=(db, queue, fn)) for db in dbs]
+    for task in tasks:
+        task.daemon = True
+        task.start()
+    return tasks
+
+def train(training_dbs, validation_db, start_iter=0, freeze=False):
+    learning_rate    = system_configs.learning_rate
+    max_iteration    = system_configs.max_iter
+    pretrained_model = system_configs.pretrain
+    snapshot         = system_configs.snapshot
+    val_iter         = system_configs.val_iter
+    display          = system_configs.display
+    decay_rate       = system_configs.decay_rate
+    stepsize         = system_configs.stepsize
+    batch_size       = system_configs.batch_size
+
+    # getting the size of each database
+    training_size   = len(training_dbs[0].db_inds)
+    validation_size = len(validation_db.db_inds)
+
+    # queues storing data for training
+    training_queue   = Queue(system_configs.prefetch_size) # 5
+    validation_queue = Queue(5)
+
+    # queues storing pinned data for training
+    pinned_training_queue   = queue.Queue(system_configs.prefetch_size) # 5
+    pinned_validation_queue = queue.Queue(5)
+
+    # load data sampling function
+    data_file   = "sample.{}".format(training_dbs[0].data) # "sample.coco"
+    sample_data = importlib.import_module(data_file).sample_data
+    # print(type(sample_data)) # function
+
+    # allocating resources for parallel reading
+    training_tasks   = init_parallel_jobs(training_dbs, training_queue, sample_data)
+    if val_iter:
+        validation_tasks = init_parallel_jobs([validation_db], validation_queue, sample_data)
+
+    training_pin_semaphore   = threading.Semaphore()
+    validation_pin_semaphore = threading.Semaphore()
+    training_pin_semaphore.acquire()
+    validation_pin_semaphore.acquire()
+
+    training_pin_args   = (training_queue, pinned_training_queue, training_pin_semaphore)
+    training_pin_thread = threading.Thread(target=pin_memory, args=training_pin_args)
+    training_pin_thread.daemon = True
+    training_pin_thread.start()
+
+    validation_pin_args   = (validation_queue, pinned_validation_queue, validation_pin_semaphore)
+    validation_pin_thread = threading.Thread(target=pin_memory, args=validation_pin_args)
+    validation_pin_thread.daemon = True
+    validation_pin_thread.start()
+
+    print("building model...")
+    nnet = NetworkFactory(flag=True)
+
+    if pretrained_model is not None:
+        if not os.path.exists(pretrained_model):
+            raise ValueError("pretrained model does not exist")
+        print("loading from pretrained model")
+        nnet.load_pretrained_params(pretrained_model)
+
+    if start_iter:
+        learning_rate /= (decay_rate ** (start_iter // stepsize))
+
+        nnet.load_params(start_iter)
+        nnet.set_lr(learning_rate)
+        print("training starts from iteration {} with learning_rate {}".format(start_iter + 1, learning_rate))
+    else:
+        nnet.set_lr(learning_rate)
+
+    print("training start...")
+    nnet.cuda()
+    nnet.train_mode()
+    header = None
+    metric_logger = utils.MetricLogger(delimiter="  ")
+    metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
+    metric_logger.add_meter('class_error', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+
+    with stdout_to_tqdm() as save_stdout:
+        for iteration in metric_logger.log_every(tqdm(range(start_iter + 1, max_iteration + 1),
+                                                      file=save_stdout, ncols=67),
+                                                 print_freq=10, header=header):
+
+            training = pinned_training_queue.get(block=True)
+            viz_split = 'train'
+            save = True if (display and iteration % display == 0) else False
+            (set_loss, loss_dict) \
+                = nnet.train(iteration, save, viz_split, **training)
+            (loss_dict_reduced, loss_dict_reduced_unscaled, loss_dict_reduced_scaled, loss_value) = loss_dict
+            metric_logger.update(loss=loss_value, **loss_dict_reduced_scaled, **loss_dict_reduced_unscaled)
+            metric_logger.update(class_error=loss_dict_reduced['class_error'])
+            metric_logger.update(lr=learning_rate)
+
+            del set_loss
+
+            if val_iter and validation_db.db_inds.size and iteration % val_iter == 0:
+                nnet.eval_mode()
+                viz_split = 'val'
+                save = True
+                validation = pinned_validation_queue.get(block=True)
+                (val_set_loss, val_loss_dict) \
+                    = nnet.validate(iteration, save, viz_split, **validation)
+                (loss_dict_reduced, loss_dict_reduced_unscaled, loss_dict_reduced_scaled, loss_value) = val_loss_dict
+                print('[VAL LOG]\t[Saving training and evaluating images...]')
+                metric_logger.update(loss=loss_value, **loss_dict_reduced_scaled, **loss_dict_reduced_unscaled)
+                metric_logger.update(class_error=loss_dict_reduced['class_error'])
+                metric_logger.update(lr=learning_rate)
+                nnet.train_mode()
+
+            if iteration % snapshot == 0:
+                nnet.save_params(iteration)
+
+            if iteration % stepsize == 0:
+                learning_rate /= decay_rate
+                nnet.set_lr(learning_rate)
+
+            if iteration % (training_size // batch_size) == 0:
+                metric_logger.synchronize_between_processes()
+                print("Averaged stats:", metric_logger)
+
+
+    # sending signal to kill the thread
+    training_pin_semaphore.release()
+    validation_pin_semaphore.release()
+
+    # terminating data fetching processes
+    for training_task in training_tasks:
+        training_task.terminate()
+    for validation_task in validation_tasks:
+        validation_task.terminate()
+
+if __name__ == "__main__":
+    args = parse_args()
+
+    cfg_file = os.path.join(system_configs.config_dir, args.cfg_file + ".json")
+    print(cfg_file)
+    with open(cfg_file, "r") as f:
+        configs = json.load(f)
+
+    configs["system"]["snapshot_name"] = args.cfg_file  # CornerNet
+    system_configs.update_config(configs["system"])
+
+    train_split = system_configs.train_split
+    val_split   = system_configs.val_split
+
+    dataset = system_configs.dataset  # MSCOCO | FVV
+    print("loading all datasets {}...".format(dataset))
+
+    threads = args.threads  # 4 every 4 epoch shuffle the indices
+    print("using {} threads".format(threads))
+    training_dbs  = [datasets[dataset](configs["db"], train_split) for _ in range(threads)]
+    validation_db = datasets[dataset](configs["db"], val_split)
+
+    # print("system config...")
+    # pprint.pprint(system_configs.full)
+    #
+    # print("db config...")
+    # pprint.pprint(training_dbs[0].configs)
+
+    print("len of training db: {}".format(len(training_dbs[0].db_inds)))
+    print("len of testing db: {}".format(len(validation_db.db_inds)))
+
+    print("freeze the pretrained network: {}".format(args.freeze))
+    train(training_dbs, validation_db, args.start_iter, args.freeze) # 0
