@@ -47,8 +47,8 @@ def parse_args():
     return args
 
 def train(training_dbs, validation_db, begin_iteration=0, freeze=False):
-    learning_rate    = setup_configurations.learning_rate
-    max_iteration    = setup_configurations.max_iter
+    lr    = setup_configurations.lr
+    end_iter    = setup_configurations.end_iter
     pretrained_model = setup_configurations.pretrain
     snapshot         = setup_configurations.snapshot
     val_iter         = setup_configurations.val_iter
@@ -94,34 +94,33 @@ def train(training_dbs, validation_db, begin_iteration=0, freeze=False):
     validation_pin_thread.daemon = True
     validation_pin_thread.start()
 
-    print("building model...")
-    nnet = NetworkFactory(flag=True)
+    model = NetworkFactory(flag=True)
 
     if pretrained_model is not None:
         if not os.path.exists(pretrained_model):
-            raise ValueError("pretrained model does not exist")
-        print("loading from pretrained model")
-        nnet.load_pretrained_params(pretrained_model)
+            raise ValueError("Could not find the pre-trained model!")
+        model.load_pretrained_params(pretrained_model)
 
     if begin_iteration:
-        learning_rate /= (decay_rate ** (begin_iteration // stepsize))
+        # Using learning rate decay
+        lr /= (decay_rate ** (begin_iteration // stepsize))
 
-        nnet.load_params(begin_iteration)
-        nnet.set_lr(learning_rate)
-        print("training starts from iteration {} with learning_rate {}".format(begin_iteration + 1, learning_rate))
+        model.load_params(begin_iteration)
+        model.set_lr(lr)
+        print("Begins training from iteration {} with lr {}".format(begin_iteration + 1, decay_rate))
     else:
-        nnet.set_lr(learning_rate)
+        model.set_lr(lr)
 
-    print("training start...")
-    nnet.cuda()
-    nnet.train_mode()
+    # Put it on GPU
+    model.cuda()
+    model.train_mode()
     header = None
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     metric_logger.add_meter('class_error', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
 
     with stdout_to_tqdm() as save_stdout:
-        for iteration in metric_logger.log_every(tqdm(range(begin_iteration + 1, max_iteration + 1),
+        for iteration in metric_logger.log_every(tqdm(range(begin_iteration + 1, end_iter + 1),
                                                       file=save_stdout, ncols=67),
                                                  print_freq=10, header=header):
 
@@ -129,34 +128,34 @@ def train(training_dbs, validation_db, begin_iteration=0, freeze=False):
             viz_split = 'train'
             save = True if (display and iteration % display == 0) else False
             (set_loss, loss_dict) \
-                = nnet.train(iteration, save, viz_split, **training)
+                = model.train(iteration, save, viz_split, **training)
             (loss_dict_reduced, loss_dict_reduced_unscaled, loss_dict_reduced_scaled, loss_value) = loss_dict
             metric_logger.update(loss=loss_value, **loss_dict_reduced_scaled, **loss_dict_reduced_unscaled)
             metric_logger.update(class_error=loss_dict_reduced['class_error'])
-            metric_logger.update(lr=learning_rate)
+            metric_logger.update(lr=lr)
 
             del set_loss
 
             if val_iter and validation_db.db_inds.size and iteration % val_iter == 0:
-                nnet.eval_mode()
+                model.eval_mode()
                 viz_split = 'val'
                 save = True
                 validation = pinned_validation_queue.get(block=True)
                 (val_set_loss, val_loss_dict) \
-                    = nnet.validate(iteration, save, viz_split, **validation)
+                    = model.validate(iteration, save, viz_split, **validation)
                 (loss_dict_reduced, loss_dict_reduced_unscaled, loss_dict_reduced_scaled, loss_value) = val_loss_dict
                 print('[VAL LOG]\t[Saving training and evaluating images...]')
                 metric_logger.update(loss=loss_value, **loss_dict_reduced_scaled, **loss_dict_reduced_unscaled)
                 metric_logger.update(class_error=loss_dict_reduced['class_error'])
-                metric_logger.update(lr=learning_rate)
-                nnet.train_mode()
+                metric_logger.update(lr=lr)
+                model.train_mode()
 
             if iteration % snapshot == 0:
-                nnet.save_params(iteration)
+                model.save_params(iteration)
 
             if iteration % stepsize == 0:
-                learning_rate /= decay_rate
-                nnet.set_lr(learning_rate)
+                lr /= decay_rate
+                model.set_lr(lr)
 
             if iteration % (training_size // batch_size) == 0:
                 metric_logger.synchronize_between_processes()
@@ -189,15 +188,9 @@ if __name__ == "__main__":
     val_split   = setup_configurations.val_split
 
     dataset = setup_configurations.dataset  # MSCOCO | FVV
-    print("loading all datasets {}...".format(dataset))
 
     num_threads = args.num_threads  # 4 every 4 epoch shuffle the indices
-    print("using {} threads".format(num_threads))
     training_dbs  = [datasets[dataset](configs_dict["db"], train_split) for _ in range(num_threads)]
     validation_db = datasets[dataset](configs_dict["db"], val_split)
 
-    print("len of training db: {}".format(len(training_dbs[0].db_inds)))
-    print("len of testing db: {}".format(len(validation_db.db_inds)))
-
-    print("freeze the pretrained network: {}".format(args.freeze))
     train(training_dbs, validation_db, args.begin_iteration, args.freeze) # 0

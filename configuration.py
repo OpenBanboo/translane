@@ -24,9 +24,9 @@ class Configuration:
         self._settings["display"]           = 5
         self._settings["snapshot"]          = 5000
         self._settings["stepsize"]          = 450000
-        self._settings["learning_rate"]     = 0.00025
+        self._settings["lr"]     = 0.00025
         self._settings["decay_rate"]        = 10
-        self._settings["max_iter"]          = 500000
+        self._settings["end_iter"]          = 500000
         self._settings["val_iter"]          = 100
         self._settings["batch_size"]        = 1
         self._settings["snapshot_name"]     = None
@@ -256,12 +256,12 @@ class Configuration:
         return self._settings["batch_size"]
 
     @property
-    def max_iter(self):
-        return self._settings["max_iter"]
+    def end_iter(self):
+        return self._settings["end_iter"]
 
     @property
-    def learning_rate(self):
-        return self._settings["learning_rate"]
+    def lr(self):
+        return self._settings["lr"]
 
     @property
     def decay_rate(self):
