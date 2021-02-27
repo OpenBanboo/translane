@@ -1,3 +1,9 @@
+"""
+TuSimple dataset which returns image_id for evaluation.
+
+Mostly copy-paste from https://github.com/liuruijin17/LSTR/blob/main/db/tusimple.py
+"""
+
 import sys
 import json
 import os
@@ -44,7 +50,7 @@ class TUSIMPLE(DETECTION):
         super(TUSIMPLE, self).__init__(db_config)
         data_dir   = setup_configurations.data_dir
         # result_dir = setup_configurations.result_dir
-        cache_dir   = setup_configurations.cache_dir
+        saved_dir   = setup_configurations.saved_dir
         max_lanes   = setup_configurations.max_lanes
         self.metric = 'default'
         inp_h, inp_w = db_config['input_size']
@@ -99,7 +105,7 @@ class TUSIMPLE(DETECTION):
             value: key for key, value in self._classes.items()
         }
 
-        self._cache_file = os.path.join(cache_dir, "tusimple_{}.pkl".format(self._dataset))
+        self._cache_file = os.path.join(saved_dir, "tusimple_{}.pkl".format(self._dataset))
 
 
         if self.augmentations is not None:

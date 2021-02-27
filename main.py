@@ -11,14 +11,10 @@ import random
 import time
 from pathlib import Path
 import queue
-import pprint
 import numpy as np
 import torch
-from torch.utils.data import DataLoader, DistributedSampler
 import importlib
-import datasets
 import threading
-import traceback
 import util.misc as utils
 from tqdm import tqdm
 from util import stdout_to_tqdm
@@ -28,25 +24,23 @@ from torch.multiprocessing import Process, Queue, Pool
 from database.datasets import datasets
 import models.py_utils.misc as utils
 from util.general_utils import create_directories, pin_memory, init_parallel_jobs, prefetch_data
-#from datasets import build_dataset, get_coco_api_from_dataset
-#from engine import evaluate, train_one_epoch
-#from models import build_model
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Train Transformer Network")
+    parser = argparse.ArgumentParser(description="Train TransLane Network")
     # Model parameters
     parser.add_argument("configuration", help="Configuration File", type=str)
-    # Number o
+    # The beginning iteration for training
     parser.add_argument("-b", dest="begin_iteration",
                         help="Begin to train at iteration b using pretrained model",
                         default=0, type=int)
-    parser.add_argument("-t", dest="num_threads", default=8, type=int)
+    # The number of cpu threads used for loading data in order to achieve minimal
+    parser.add_argument("-t", dest="num_threads", default=6, type=int)
     parser.add_argument("--freeze", action="store_true")
 
     args = parser.parse_args()
     return args
 
-def train(training_dbs, validation_db, begin_iteration=0, freeze=False):
+def train(train_databases, validation_database, begin_iteration=0, freeze=False):
     lr    = setup_configurations.lr
     end_iter    = setup_configurations.end_iter
     pretrained_model = setup_configurations.pretrain
@@ -57,11 +51,11 @@ def train(training_dbs, validation_db, begin_iteration=0, freeze=False):
     stepsize         = setup_configurations.stepsize
     batch_size       = setup_configurations.batch_size
 
-    # getting the size of each database
-    training_size   = len(training_dbs[0].db_inds)
-    validation_size = len(validation_db.db_inds)
+    # fetch the size of train and validation
+    training_size   = len(train_databases[0].db_inds)
+    validation_size = len(validation_database.db_inds)
 
-    # queues storing data for training
+    # Create queues prefecthing data for training
     training_queue   = Queue(setup_configurations.prefetch_size) # 5
     validation_queue = Queue(5)
 
@@ -70,14 +64,13 @@ def train(training_dbs, validation_db, begin_iteration=0, freeze=False):
     pinned_validation_queue = queue.Queue(5)
 
     # load data sampling function
-    data_file   = "sample.{}".format(training_dbs[0].data) # "sample.coco"
+    data_file   = "sample.{}".format(train_databases[0].data) # "sample.coco"
     sample_data = importlib.import_module(data_file).sample_data
-    # print(type(sample_data)) # function
 
     # allocating resources for parallel reading
-    training_tasks   = init_parallel_jobs(training_dbs, training_queue, sample_data)
+    training_tasks   = init_parallel_jobs(train_databases, training_queue, sample_data)
     if val_iter:
-        validation_tasks = init_parallel_jobs([validation_db], validation_queue, sample_data)
+        validation_tasks = init_parallel_jobs([validation_database], validation_queue, sample_data)
 
     training_pin_semaphore   = threading.Semaphore()
     validation_pin_semaphore = threading.Semaphore()
@@ -136,7 +129,7 @@ def train(training_dbs, validation_db, begin_iteration=0, freeze=False):
 
             del set_loss
 
-            if val_iter and validation_db.db_inds.size and iteration % val_iter == 0:
+            if val_iter and validation_database.db_inds.size and iteration % val_iter == 0:
                 model.eval_mode()
                 viz_split = 'val'
                 save = True
@@ -173,24 +166,29 @@ def train(training_dbs, validation_db, begin_iteration=0, freeze=False):
         validation_task.terminate()
 
 if __name__ == "__main__":
+    '''
+    Arguments parsing
+    '''
     args = parse_args()
 
     # Fetch the json configuration file
     configuration = os.path.join(setup_configurations.config_dir, args.configuration + ".json")
-
     with open(configuration, "r") as f:
         configs_dict = json.load(f)
 
     configs_dict["system"]["snapshot_name"] = args.configuration
     setup_configurations.update_config(configs_dict["system"])
 
-    train_split = setup_configurations.train_split
-    val_split   = setup_configurations.val_split
+    # Fetch the inputs of traning and validation
+    inputs_train = setup_configurations.train_split
+    inputs_validation   = setup_configurations.val_split
 
     dataset = setup_configurations.dataset  # MSCOCO | FVV
+    num_threads = args.num_threads  # Default is 6: every 6 epoch shuffle the indices
 
-    num_threads = args.num_threads  # 4 every 4 epoch shuffle the indices
-    training_dbs  = [datasets[dataset](configs_dict["db"], train_split) for _ in range(num_threads)]
-    validation_db = datasets[dataset](configs_dict["db"], val_split)
+    # Load databases
+    train_databases  = [datasets[dataset](configs_dict["db"], inputs_train) for _ in range(num_threads)]
+    validation_database = datasets[dataset](configs_dict["db"], inputs_validation)
 
-    train(training_dbs, validation_db, args.begin_iteration, args.freeze) # 0
+    # Start training
+    train(train_databases, validation_database, args.begin_iteration, args.freeze) # 0

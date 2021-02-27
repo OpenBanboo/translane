@@ -1,4 +1,4 @@
-# Use most of the settings same as LSTR: https://github.com/liuruijin17/LSTR
+# Use most of the settings the same as LSTR: https://github.com/liuruijin17/LSTR
 
 import numpy as np
 import os
@@ -16,15 +16,15 @@ class Configuration:
 
         # Dir settings
         self._settings["data_dir"]   = "./data"
-        self._settings["cache_dir"] = "./cache"
-        self._settings["config_dir"] = "./config"
+        self._settings["saved_dir"] = "./saved"
+        self._settings["config_dir"] = "./configurations"
         self._settings["result_dir"] = "./results"
 
         # Training Config
         self._settings["display"]           = 5
         self._settings["snapshot"]          = 5000
         self._settings["stepsize"]          = 450000
-        self._settings["lr"]     = 0.00025
+        self._settings["lr"]                = 0.00025
         self._settings["decay_rate"]        = 10
         self._settings["end_iter"]          = 500000
         self._settings["val_iter"]          = 100
@@ -225,7 +225,7 @@ class Configuration:
 
     @property
     def snapshot_dir(self):
-        snapshot_dir = os.path.join(self.cache_dir, "nnet", self.snapshot_name)
+        snapshot_dir = os.path.join(self.saved_dir, "model", self.snapshot_name)
 
         if not os.path.exists(snapshot_dir):
             os.makedirs(snapshot_dir)
@@ -239,7 +239,7 @@ class Configuration:
 
     @property
     def box_snapshot_dir(self):
-        box_snaptshot_dir = os.path.join(self.box_cache_dir, 'nnet', self.snapshot_name)
+        box_snaptshot_dir = os.path.join(self.box_saved_dir, 'model', self.snapshot_name)
         return box_snaptshot_dir
 
     @property
@@ -288,14 +288,14 @@ class Configuration:
         return self._settings["data_dir"]
 
     @property
-    def cache_dir(self):
-        if not os.path.exists(self._settings["cache_dir"]):
-            os.makedirs(self._settings["cache_dir"])
-        return self._settings["cache_dir"]
+    def saved_dir(self):
+        if not os.path.exists(self._settings["saved_dir"]):
+            os.makedirs(self._settings["saved_dir"])
+        return self._settings["saved_dir"]
 
     @property
-    def box_cache_dir(self):
-        return self._settings['box_cache_dir']
+    def box_saved_dir(self):
+        return self._settings['box_saved_dir']
 
     def update_config(self, new):
         for key in new:

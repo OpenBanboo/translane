@@ -1,3 +1,9 @@
+"""
+TuSimple dataset kp_detection and line drawing
+
+Mostly copy-paste from https://github.com/liuruijin17/LSTR/blob/main/sample/tusimple.py
+"""
+
 import cv2
 import numpy as np
 import torch
