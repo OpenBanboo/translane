@@ -23,7 +23,7 @@ from factory.network_factory import NetworkFactory
 from torch.multiprocessing import Process, Queue, Pool
 from database.datasets import datasets
 import models.py_utils.misc as utils
-from util.general_utils import create_directories, pin_memory, init_parallel_jobs, prefetch_data
+from util.general_utils import create_directories, pin_memory, start_multi_tasks, prefetch_data
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train TransLane Network")
@@ -56,37 +56,44 @@ def train(train_databases, validation_database, begin_iteration=0, freeze=False)
     validation_size = len(validation_database.db_inds)
 
     # Create queues prefecthing data for training
-    training_queue   = Queue(setup_configurations.prefetch_size) # 5
+    training_queue   = Queue(setup_configurations.prefetch_size)
     validation_queue = Queue(5)
 
-    # queues storing pinned data for training
-    pinned_training_queue   = queue.Queue(setup_configurations.prefetch_size) # 5
-    pinned_validation_queue = queue.Queue(5)
+    # Create queues saving fixed data for training
+    fixed_training_queue   = queue.Queue(setup_configurations.prefetch_size)
+    fixed_validation_queue = queue.Queue(5)
 
     # load data sampling function
     data_file   = "sample.{}".format(train_databases[0].data) # "sample.coco"
     sample_data = importlib.import_module(data_file).sample_data
 
-    # allocating resources for parallel reading
-    training_tasks   = init_parallel_jobs(train_databases, training_queue, sample_data)
+    # Start threads for parallel data processing
+    process_train = start_multi_tasks(train_databases, training_queue, sample_data)
     if val_iter:
-        validation_tasks = init_parallel_jobs([validation_database], validation_queue, sample_data)
+        process_validation = start_multi_tasks([validation_database],
+                                               validation_queue,
+                                               sample_data)
 
-    training_pin_semaphore   = threading.Semaphore()
-    validation_pin_semaphore = threading.Semaphore()
-    training_pin_semaphore.acquire()
-    validation_pin_semaphore.acquire()
+    # Using multi-threading to accelerating the training speed
+    fixed_train_semaphore   = threading.Semaphore()
+    fixed_validation_semaphore = threading.Semaphore()
+    fixed_train_semaphore.acquire()
+    fixed_validation_semaphore.acquire()
 
-    training_pin_args   = (training_queue, pinned_training_queue, training_pin_semaphore)
-    training_pin_thread = threading.Thread(target=pin_memory, args=training_pin_args)
-    training_pin_thread.daemon = True
-    training_pin_thread.start()
+    fixed_train_args   = (training_queue, fixed_training_queue, fixed_train_semaphore)
+    fixed_train_thread = threading.Thread(target=pin_memory,
+                                          args=fixed_train_args)
+    fixed_train_thread.daemon = True
+    fixed_train_thread.start()
 
-    validation_pin_args   = (validation_queue, pinned_validation_queue, validation_pin_semaphore)
-    validation_pin_thread = threading.Thread(target=pin_memory, args=validation_pin_args)
-    validation_pin_thread.daemon = True
-    validation_pin_thread.start()
+    fixed_validation_args   = (validation_queue, fixed_validation_queue,
+                               fixed_validation_semaphore)
+    fixed_validation_thread = threading.Thread(target=pin_memory,
+                                               args=fixed_validation_args)
+    fixed_validation_thread.daemon = True
+    fixed_validation_thread.start()
 
+    # Build the network from factory
     model = NetworkFactory(flag=True)
 
     if pretrained_model is not None:
@@ -97,50 +104,63 @@ def train(train_databases, validation_database, begin_iteration=0, freeze=False)
     if begin_iteration:
         # Using learning rate decay
         lr /= (decay_rate ** (begin_iteration // stepsize))
-
         model.load_params(begin_iteration)
         model.set_lr(lr)
         print("Begins training from iteration {} with lr {}".format(begin_iteration + 1, decay_rate))
     else:
         model.set_lr(lr)
 
-    # Put it on GPU
+    # Put model on GPU for acceleration
     model.cuda()
     model.train_mode()
     header = None
-    metric_logger = utils.MetricLogger(delimiter="  ")
-    metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
-    metric_logger.add_meter('class_error', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+    # Use MetricLogger from DETR
+    stdout_writer = utils.MetricLogger(delimiter="  ")
+    stdout_writer.add_meter('lr', utils.SmoothedValue(window_size=1,
+                                                      fmt='{value:.6f}'))
+    stdout_writer.add_meter('class_error', utils.SmoothedValue(window_size=1,
+                                                               fmt='{value:.2f}'))
 
-    with stdout_to_tqdm() as save_stdout:
-        for iteration in metric_logger.log_every(tqdm(range(begin_iteration + 1, end_iter + 1),
-                                                      file=save_stdout, ncols=67),
-                                                 print_freq=10, header=header):
+    with stdout_to_tqdm() as output_file:
+        for iteration in stdout_writer.log_every(tqdm(range(begin_iteration + 1,
+                                                            end_iter + 1),
+                                                      file=output_file,
+                                                      ncols=67),
+                                                 print_freq=25,
+                                                 header=header):
 
-            training = pinned_training_queue.get(block=True)
+            training = fixed_training_queue.get(block=True)
             viz_split = 'train'
             save = True if (display and iteration % display == 0) else False
+            # Start training the model
             (set_loss, loss_dict) \
                 = model.train(iteration, save, viz_split, **training)
             (loss_dict_reduced, loss_dict_reduced_unscaled, loss_dict_reduced_scaled, loss_value) = loss_dict
-            metric_logger.update(loss=loss_value, **loss_dict_reduced_scaled, **loss_dict_reduced_unscaled)
-            metric_logger.update(class_error=loss_dict_reduced['class_error'])
-            metric_logger.update(lr=lr)
+            stdout_writer.update(loss=loss_value,
+                                 **loss_dict_reduced_scaled,
+                                 **loss_dict_reduced_unscaled)
+            stdout_writer.update(class_error=loss_dict_reduced['class_error'])
+            stdout_writer.update(lr=lr)
 
+            # Remove the set_loss
             del set_loss
 
+            # Validation Process
             if val_iter and validation_database.db_inds.size and iteration % val_iter == 0:
                 model.eval_mode()
                 viz_split = 'val'
-                save = True
-                validation = pinned_validation_queue.get(block=True)
+                save = True # Default Ture
+                validation = fixed_validation_queue.get(block=True)
+                # Start validating
                 (val_set_loss, val_loss_dict) \
                     = model.validate(iteration, save, viz_split, **validation)
-                (loss_dict_reduced, loss_dict_reduced_unscaled, loss_dict_reduced_scaled, loss_value) = val_loss_dict
-                print('[VAL LOG]\t[Saving training and evaluating images...]')
-                metric_logger.update(loss=loss_value, **loss_dict_reduced_scaled, **loss_dict_reduced_unscaled)
-                metric_logger.update(class_error=loss_dict_reduced['class_error'])
-                metric_logger.update(lr=lr)
+
+                (loss_dict_reduced, loss_dict_reduced_unscaled, loss_dict_reduced_scaled, loss_value) \
+                    = val_loss_dict
+                print('[Validation: ]\t[Storing images of train and validation]')
+                stdout_writer.update(loss=loss_value, **loss_dict_reduced_scaled, **loss_dict_reduced_unscaled)
+                stdout_writer.update(class_error=loss_dict_reduced['class_error'])
+                stdout_writer.update(lr=lr)
                 model.train_mode()
 
             if iteration % snapshot == 0:
@@ -151,19 +171,19 @@ def train(train_databases, validation_database, begin_iteration=0, freeze=False)
                 model.set_lr(lr)
 
             if iteration % (training_size // batch_size) == 0:
-                metric_logger.synchronize_between_processes()
-                print("Averaged stats:", metric_logger)
+                stdout_writer.synchronize_between_processes()
+                print("Averaged stats:", stdout_writer)
 
 
-    # sending signal to kill the thread
-    training_pin_semaphore.release()
-    validation_pin_semaphore.release()
+    # End the threads
+    fixed_train_semaphore.release()
+    fixed_validation_semaphore.release()
 
-    # terminating data fetching processes
-    for training_task in training_tasks:
-        training_task.terminate()
-    for validation_task in validation_tasks:
-        validation_task.terminate()
+    # End the data fetching tasks
+    for t in process_train:
+        t.terminate()
+    for t in process_validation:
+        t.terminate()
 
 if __name__ == "__main__":
     '''

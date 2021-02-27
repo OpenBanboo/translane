@@ -33,8 +33,8 @@ def pin_memory(data_queue, pinned_data_queue, sema):
         if sema.acquire(blocking=False):
             return
 
-
-def init_parallel_jobs(dbs, queue, fn):
+# Initialize parallel tasks from queues which saved the prefetched data
+def start_multi_tasks(dbs, queue, fn):
     tasks = [Process(target=prefetch_data, args=(db, queue, fn)) for db in dbs]
     for task in tasks:
         task.daemon = True
