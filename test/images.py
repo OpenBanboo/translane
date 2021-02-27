@@ -1,3 +1,8 @@
+"""
+Evaluator for Tusimple Dataset
+
+Copy-paste from https://github.com/liuruijin17/LSTR/blob/main/test/images.py
+"""
 import os
 import torch
 import cv2
@@ -11,9 +16,9 @@ from torch import nn
 import matplotlib.pyplot as plt
 from copy import deepcopy
 from tqdm import tqdm
-from config import setup_configurations
+from configuration import setup_configurations
 
-from utils import crop_image, normalize_
+from util import crop_image, normalize_
 
 from sample.vis import *
 

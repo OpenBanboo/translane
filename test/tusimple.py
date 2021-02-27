@@ -1,3 +1,8 @@
+"""
+Lane Drawing Methods for Tusimple Dataset
+
+Copy-paste from https://github.com/liuruijin17/LSTR/blob/main/test/tusimple.py
+"""
 import os
 import torch
 import cv2
