@@ -15,13 +15,11 @@ pytorch/
         README.md
 ```
 
-Setup virtual environment for DETR demo:
+Setup virtual environment for TransLane demo:
 ```
-conda create --name translane
+conda env create --name translane --file environment.txt
 conda activate translane
-conda install -c anaconda pillow
-conda install pytorch==1.6.0 torchvision==0.7.0 -c pytorch
-conda install matplotlib requests
+pip install -r requirements.txt
 ```
 
 Run DETR demo:
