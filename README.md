@@ -30,7 +30,8 @@ TuSimple/
 ```
 
 ## Architecture
-[TransLane.pdf](https://github.com/OpenBanboo/translane/files/6057393/TransLane.pdf)
+![TransLane](https://user-images.githubusercontent.com/14226287/109428167-9ff58100-79aa-11eb-82a1-4a4606a3d592.jpg)
+
 
 
 Setup virtual environment for TransLane demo:
