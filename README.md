@@ -30,7 +30,8 @@ TuSimple/
 ```
 
 ## Architecture
-![TransLane](https://user-images.githubusercontent.com/14226287/109428167-9ff58100-79aa-11eb-82a1-4a4606a3d592.jpg)
+![TransLane](https://user-images.githubusercontent.com/14226287/109428185-c0254000-79aa-11eb-810e-632ebf8852a8.png)
+
 
 
 
