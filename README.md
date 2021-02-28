@@ -35,14 +35,26 @@ TuSimple/
 
 
 
-Setup virtual environment for TransLane demo:
+### Setup virtual environment for TransLane demo:
 ```
 conda env create --name translane --file environment.txt
 conda activate translane
 pip install -r requirements.txt
 ```
 
-Run DETR demo:
+### Training on the network
 ```
-jupyter notebook
+# Start training using pretrained parameters saved at iteration 500000
+python main.py translane -b 500000
+```
+
+### Testing on the network
+```
+# Testing TuSimple split using pretrained parameters saved at iteration 500000
+python evaluate.py translane -b 500000 -m eval -s testing
+```
+
+### Run TransLane demo to test your customized image:
+```
+[Colab](https://drive.google.com/file/d/1zgV-EXYyKBTQJdlDVbsFBsqWFI1jO231/view?usp=sharing)
 ```
