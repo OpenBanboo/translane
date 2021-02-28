@@ -29,6 +29,10 @@ TuSimple/
         
 ```
 
+## Architecture
+[TransLane.pdf](https://github.com/OpenBanboo/translane/files/6057393/TransLane.pdf)
+
+
 Setup virtual environment for TransLane demo:
 ```
 conda env create --name translane --file environment.txt
