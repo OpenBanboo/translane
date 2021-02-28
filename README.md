@@ -55,5 +55,13 @@ python evaluate.py translane -b 500000 -m eval -s testing
 ```
 
 ### Run demo on customized images:
+```
+python evaluate.py translane -b 500000 -m customized -c ./ --debug
+```
+Note that, we've put 9 selected customized images captured from San Jose, California. 
+The output of the model with predited lane marks can be found under ./detections folder.
+(ex.)
+![Uploading sample9.jpg…]()
+
 [TransLane Demo](https://drive.google.com/file/d/1zgV-EXYyKBTQJdlDVbsFBsqWFI1jO231/view?usp=sharing)
 
