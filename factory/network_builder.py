@@ -52,10 +52,10 @@ class NetworkFactory(object):
 
         module_file = "models.{}".format(setup_configurations.snapshot_name)
         print("Building {}".format(module_file))
-        nnet_module = importlib.import_module(module_file)
-
-        self.model   = DummyModule(nnet_module.model(flag=flag))
-        self.loss    = nnet_module.loss()
+        network_module = importlib.import_module(module_file)
+        # Create a dummy module first
+        self.model   = DummyModule(network_module.model(flag=flag))
+        self.loss    = network_module.loss()
         self.network = Network(self.model, self.loss)
         self.network = DataParallel(self.network, chunk_sizes=setup_configurations.chunk_sizes)
         self.flag    = flag
@@ -76,7 +76,7 @@ class NetworkFactory(object):
         macs, _ = clever_format([macs, params], "%.3f")
         print('MACs: {}'.format(macs))
 
-
+        # Choosing learning methods to initialize optimizers
         if setup_configurations.opt_algo == "adam":
             self.optimizer = torch.optim.Adam(
                 filter(lambda p: p.requires_grad, self.model.parameters())
