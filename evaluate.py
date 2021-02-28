@@ -12,7 +12,7 @@ import matplotlib
 matplotlib.use("Agg")
 
 from configuration import setup_configurations
-from factory.network_factory import NetworkFactory
+from factory.network_builder import NetworkFactory
 from database.datasets import datasets
 from database.utils.evaluator import Evaluator
 from util.general_utils import create_directories

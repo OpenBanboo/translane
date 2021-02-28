@@ -19,7 +19,7 @@ import util.misc as utils
 from tqdm import tqdm
 from util import stdout_to_tqdm
 from configuration import setup_configurations
-from factory.network_factory import NetworkFactory
+from factory.network_builder import NetworkFactory
 from torch.multiprocessing import Process, Queue, Pool
 from database.datasets import datasets
 import models.py_utils.misc as utils

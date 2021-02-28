@@ -1,3 +1,8 @@
+"""
+Builder class for LSTR
+
+Mostly copy-paste from https://github.com/liuruijin17/LSTR/blob/main/nnet/py_factory.py
+"""
 import os
 import torch
 import importlib
@@ -39,11 +44,14 @@ class DummyModule(nn.Module):
         return self.module(*xs, **kwargs)
 
 class NetworkFactory(object):
+    '''
+    Factory to build the network according to the configurations
+    '''
     def __init__(self, flag=False):
         super(NetworkFactory, self).__init__()
 
         module_file = "models.{}".format(setup_configurations.snapshot_name)
-        # print("module_file: {}".format(module_file)) # models.CornerNet
+        print("Building {}".format(module_file))
         nnet_module = importlib.import_module(module_file)
 
         self.model   = DummyModule(nnet_module.model(flag=flag))
