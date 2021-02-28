@@ -55,6 +55,5 @@ python evaluate.py translane -b 500000 -m eval -s testing
 ```
 
 ### Run TransLane demo to test your customized image:
-```
 [Colab](https://drive.google.com/file/d/1zgV-EXYyKBTQJdlDVbsFBsqWFI1jO231/view?usp=sharing)
-```
+
