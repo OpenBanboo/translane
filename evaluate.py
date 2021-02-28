@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+# Modified based on DETR (https://github.com/facebookresearch/detr)
+# and LSTR (https://github.com/liuruijin17/LSTR)
+# by Fang Lin (flin4@stanford.edu)
+
 import os
 import json
 import torch
@@ -6,6 +10,7 @@ import pprint
 import argparse
 import importlib
 import sys
+
 import numpy as np
 
 import matplotlib
@@ -19,108 +24,119 @@ from util.general_utils import create_directories
 torch.backends.cudnn.benchmark = False
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Test CornerNet")
-    parser.add_argument("cfg_file", help="config file", type=str)
-    parser.add_argument("--testiter", dest="testiter",
-                        help="test at iteration i",
+    parser = argparse.ArgumentParser(description="Evaluate the trained TransLane Network")
+    parser.add_argument("configuration", help="Configuration File", type=str)
+    parser.add_argument("-b", dest="begin_iteration",
+                        help="Test using saved weights at begging of iteration",
                         default=None, type=int)
-    parser.add_argument("--split", dest="split",
-                        help="which split to use",
+    parser.add_argument("-s", dest="split",
+                        help="Database split for training, validation, and test",
                         default="validation", type=str)
+    parser.add_argument("-c", dest="customized_image_path",
+                        default=None, type=str)
+    parser.add_argument("-m", dest="mode",
+                        default=None, type=str)
     parser.add_argument("--suffix", dest="suffix", default=None, type=str)
     parser.add_argument("--debug", action="store_true")
-    parser.add_argument("--modality", dest="modality",
-                        default=None, type=str)
-    parser.add_argument("--image_root", dest="image_root",
-                        default=None, type=str)
     parser.add_argument("--batch", dest='batch',
-                        help="select a value to maximum your FPS",
+                        help="Used to tune the performance on device",
                         default=1, type=int)
     parser.add_argument("--debugEnc", action="store_true")
     parser.add_argument("--debugDec", action="store_true")
     args = parser.parse_args()
     return args
 
-def test(db, split, testiter,
-         debug=False, suffix=None, modality=None, image_root=None, batch=1,
+def evaluate(database, split, begin_iteration,
+         debug=False, suffix=None, mode=None, customized_image_path=None, batch=1,
          debugEnc=False, debugDec=False):
-    result_dir = setup_configurations.result_dir
-    result_dir = os.path.join(result_dir, str(testiter), split)
 
+    print(database, split, begin_iteration, debug, suffix, mode, customized_image_path, batch,
+          debugEnc, debugDec)
+
+    result_dir = setup_configurations.result_dir
+    result_dir = os.path.join(result_dir, str(begin_iteration), split)
+
+    # Append suffix to the result directory
     if suffix is not None:
         result_dir = os.path.join(result_dir, suffix)
-
+    # Create the result directory if it does not existed.
     create_directories([result_dir])
-    test_iter = setup_configurations.max_iter if testiter is None else testiter
-    print("loading parameters at iteration: {}".format(test_iter))
+    # Use the max iteration defined in the configuration file if -b is not assigned
+    saved_weights_iteration = setup_configurations.max_iter if begin_iteration is None else begin_iteration
+    print("Using the parameters saved at iteration: {}".format(saved_weights_iteration))
 
-    print("building neural network...")
-    nnet = NetworkFactory()
+    print("Start building the model...")
+    model = NetworkFactory()
 
-    print("loading parameters...")
-    nnet.load_params(test_iter)
-    nnet.cuda()
-    nnet.eval_mode()
+    print("Loading parameters to the built model...")
+    model.load_params(saved_weights_iteration)
+    # Put it on cuda if existed.
+    model.cuda()
+    model.eval_mode()
 
-    evaluator = Evaluator(db, result_dir)
+    print("Initializing the evaluator...")
+    evaluator = Evaluator(database, result_dir)
 
-    if modality == 'eval':
-        print('static evaluating...')
-        test_file = "test.tusimple"
-        testing = importlib.import_module(test_file).testing
-        testing(db, nnet, result_dir, debug=debug, evaluator=evaluator, repeat=batch,
+    if mode == 'eval':
+        print('Testing the statistics of the saved model...')
+        validation_file = "test.tusimple"
+        testing = importlib.import_module(validation_file).testing
+        testing(database, model, result_dir,
+                debug=debug, evaluator=evaluator, repeat=batch,
                 debugEnc=debugEnc, debugDec=debugDec)
 
-    elif modality == 'images':
-        if image_root == None:
-            raise ValueError('--image_root is not defined!')
-        print("processing [images]...")
-        test_file = "test.images"
-        image_testing = importlib.import_module(test_file).testing
-        image_testing(db, nnet, image_root, debug=debug, evaluator=None)
+    elif mode == 'customized':
+        if customized_image_path == None:
+            raise ValueError('-c customized_image_path is not defined!')
+        print("Processing customized [images]...")
+        validation_file = "test.images"
+        image_testing = importlib.import_module(validation_file).testing
+        image_testing(database, model, customized_image_path,
+                      debug=debug, evaluator=None)
 
     else:
-        raise ValueError('--modality must be one of eval/images, but now: {}'
-                         .format(modality))
+        raise ValueError('-m must be chosen from eval/customized')
 
 if __name__ == "__main__":
     args = parse_args()
 
     if args.suffix is None:
-        cfg_file = os.path.join(setup_configurations.config_dir, args.cfg_file + ".json")
+        configuration = os.path.join(setup_configurations.config_dir, args.configuration + ".json")
     else:
-        cfg_file = os.path.join(setup_configurations.config_dir, args.cfg_file + "-{}.json".format(args.suffix))
-    print("cfg_file: {}".format(cfg_file))
+        configuration = os.path.join(setup_configurations.config_dir, args.configuration + "-{}.json".format(args.suffix))
+    print("configuration: {}".format(configuration))
 
-    with open(cfg_file, "r") as f:
+    with open(configuration, "r") as f:
         configs = json.load(f)
             
-    configs["system"]["snapshot_name"] = args.cfg_file
+    configs["system"]["snapshot_name"] = args.configuration
     setup_configurations.update_config(configs["system"])
 
-    train_split = setup_configurations.train_split
-    val_split   = setup_configurations.val_split
-    test_split  = setup_configurations.test_split
+    train_data = setup_configurations.train_split
+    val_data   = setup_configurations.val_split
+    test_data  = setup_configurations.test_split
 
-    split = {
-        "training": train_split,
-        "validation": val_split,
-        "testing": test_split
+    # Data split dictionary
+    data_split = {
+        "training": train_data,
+        "validation": val_data,
+        "testing": test_data
     }[args.split]
 
     print("loading all datasets...")
     dataset = setup_configurations.dataset
-    print("split: {}".format(split))  # test
+    print("=========={}".format(dataset))
+    print("Dataset Split: {}".format(data_split))  # test
 
-    testing_db = datasets[dataset](configs["db"], split)
+    testing_database = datasets[dataset](configs["db"], data_split)
 
-    test(testing_db,
+    evaluate(testing_database,
          args.split,
-         args.testiter,
+         args.begin_iteration,
          args.debug,
          args.suffix,
-         args.modality,
-         args.image_root,
+         args.mode,
+         args.customized_image_path,
          args.batch,
          args.debugEnc,
          args.debugDec,)
