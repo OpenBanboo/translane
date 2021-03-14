@@ -1,4 +1,4 @@
-# SCNN lane detection in Pytorch
+# SCNN in Pytorch
 
 SCNN is a lane detection algorithm, proposed in ['Spatial As Deep: Spatial CNN for Traffic Scene Understanding'](https://arxiv.org/abs/1712.06080). The [official implementation](<https://github.com/XingangPan/SCNN>) is in lua torch.
 
@@ -15,7 +15,7 @@ This repository contains a re-master version in Pytorch.
 ## Data preparation
 
 ### Tusimple
-The dataset is available in [here](https://github.com/TuSimple/tusimple-benchmark/issues/3). Please download and unzip the files in one folder, which later is represented as `Tusimple_path`. Then modify the path of `Tusimple_path` in `config.py`.
+Download dataset is from [here](https://github.com/TuSimple/tusimple-benchmark/issues/3). Please download and unzip the files in one folder, which later is represented as `Tusimple_path`. Then modify the path of `Tusimple_path` in `config.py`.
 ```
 Tusimple_path
 ├── clips
@@ -28,7 +28,6 @@ Tusimple_path
 **Note:  seg\_label images and gt.txt, as in CULane dataset format,  will be generated the first time `Tusimple` object is instantiated. It may take some extra time.**
 
 
-
 <br/>
 
 ## Pre-trained Model
@@ -38,8 +37,6 @@ Tusimple_path
 | Accuracy | FP   | FN   |
 | -------- | ---- | ---- |
 | 94.16%   |0.0735|0.0825|
-
-**Note**:`torch.utils.serialization` is obsolete in Pytorch 1.0+. You can directly download **the converted model [here](https://drive.google.com/open?id=1bBdN3yhoOQBC9pRtBUxzeRrKJdF7uVTJ)**.
 
 
 <br/>
