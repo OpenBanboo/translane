@@ -1,3 +1,4 @@
+# Remastered based on: https://github.com/harryhan618/SCNN_Pytorch/blob/master/model.py
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

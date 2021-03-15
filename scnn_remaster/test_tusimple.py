@@ -54,7 +54,7 @@ transform = Compose(Resize(resize_shape), ToTensor(),
                     Normalize(mean=mean, std=std))
 dataset_name = exp_cfg['dataset'].pop('dataset_name')
 Dataset_Type = getattr(dataset, dataset_name)
-test_dataset = Dataset_Type(Dataset_Path['Tusimple'], "test", transform)
+test_dataset = Dataset_Type(Dataset_Path['TuSimple'], "test", transform)
 test_loader = DataLoader(test_dataset, batch_size=32, collate_fn=test_dataset.collate, num_workers=4)
 
 # Build the SCNN netowrk and load the pretrain model

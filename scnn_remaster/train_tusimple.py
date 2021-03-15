@@ -50,16 +50,16 @@ Dataset_Type = getattr(dataset, dataset_name)
 train_dataset = Dataset_Type(Dataset_Path[dataset_name], "train", transform_train)
 train_loader = DataLoader(train_dataset, batch_size=exp_cfg['dataset']['batch_size'], shuffle=True, collate_fn=train_dataset.collate, num_workers=8)
 
-# ------------ val data ------------
+# Load validation data
 transform_val_img = Resize(resize_shape)
 transform_val_x = Compose(ToTensor(), Normalize(mean=mean, std=std))
 transform_val = Compose(transform_val_img, transform_val_x)
 val_dataset = Dataset_Type(Dataset_Path[dataset_name], "val", transform_val)
 val_loader = DataLoader(val_dataset, batch_size=8, collate_fn=val_dataset.collate, num_workers=4)
 
-# ------------ preparation ------------
+# Build the scnn model
 net = SCNN(resize_shape, pretrained=True)
-net = net.to(device)
+net = net.to(device) # Put it on GPUT
 net = torch.nn.DataParallel(net)
 
 optimizer = optim.SGD(net.parameters(), **exp_cfg['optim'])
@@ -68,6 +68,9 @@ best_val_loss = 1e6
 
 
 def train(epoch):
+    '''
+    Define the training function
+    '''
     print("Train Epoch: {}".format(epoch))
     net.train()
     train_loss = 0
@@ -98,6 +101,7 @@ def train(epoch):
         progressbar.update(1)
 
         lr = optimizer.param_groups[0]['lr']
+        # Using tensorboard to make the evaluation summary
         tensorboard.scalar_summary(exp_name + "/train_loss", train_loss, iter_idx)
         tensorboard.scalar_summary(exp_name + "/train_loss_seg", train_loss_seg, iter_idx)
         tensorboard.scalar_summary(exp_name + "/train_loss_exist", train_loss_exist, iter_idx)

@@ -4,7 +4,7 @@
 
   "dataset": {
     "dataset_name": "TuSimple",
-    "batch_size": 32,
+    "batch_size": 16,
     "resize_shape": [512, 288]
   },
   
