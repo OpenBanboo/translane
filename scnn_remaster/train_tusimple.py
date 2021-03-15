@@ -173,7 +173,7 @@ def val(epoch):
                     cv2.putText(lane_img, "{}".format([1 if exist_pred[b, i]>0.5 else 0 for i in range(4)]), (20, 20), cv2.FONT_HERSHEY_SIMPLEX, 1.1, (255, 255, 255), 2)
                     origin_imgs.append(img)
                     origin_imgs.append(lane_img)
-                tensorboard.image_summary("img_{}".format(batch_idx), origin_imgs, epoch)
+                # tensorboard.image_summary("img_{}".format(batch_idx), origin_imgs, epoch)
 
             val_loss += loss.item()
             val_loss_seg += loss_seg.item()

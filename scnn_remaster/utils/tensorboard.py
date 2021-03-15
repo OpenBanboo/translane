@@ -38,15 +38,19 @@ class TensorBoard(object):
 
 
             # Create an Image object
-            img_sum = tf.summary.image(encoded_image_string=s.getvalue(),
+            img_sum = tf.Summary.Image(encoded_image_string=s.getvalue(),
                                        height=img.shape[0],
                                        width=img.shape[1])
             # Create a Summary value
             img_summaries.append(tf.Summary.Value(tag='%s/%d' % (tag, i), image=img_sum))
 
         # Create and write Summary
-        summary = tf.Summary(value=img_summaries)
-        self.writer.add_summary(summary, step)
+        # summary = tf.Summary(value=img_summaries)
+        # self.writer.add_summary(summary, step)
+        with self.writer.as_default():
+            for tag, value in img_summaries:
+                tf.summary.scalar(tag, value, step=step)
+            self.writer.flush()
         
     def histo_summary(self, tag, values, step, bins=1000):
         """Log a histogram of the tensor of values."""
