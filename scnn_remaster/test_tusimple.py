@@ -1,3 +1,4 @@
+# This code is modified based on https://github.com/OpenBanboo/translane/blob/main/scnn_remaster/test_tusimple.py
 import argparse
 import json
 import os
@@ -12,23 +13,22 @@ from model_scnn import SCNN
 from utils.prob2lines import getLane
 from utils.transforms import *
 
-
+# Argument parsing
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp_dir", type=str, default="./experiments/exp0")
     args = parser.parse_args()
     return args
 
-
-# ------------ config ------------
+# Loading configs
 args = parse_args()
 exp_dir = args.exp_dir
 exp_name = exp_dir.split('/')[-1]
 
-with open(os.path.join(exp_dir, "cfg.json")) as f:
+with open(os.path.join(exp_dir, "modle_config.json")) as f:
     exp_cfg = json.load(f)
 resize_shape = tuple(exp_cfg['dataset']['resize_shape'])
-device = torch.device('cuda')
+device = torch.device('cuda') # put on GPU
 
 
 def split_path(path):
@@ -45,11 +45,9 @@ def split_path(path):
     return folders
 
 
-# ------------ data and model ------------
-# # CULane mean, std
-# mean=(0.3598, 0.3653, 0.3662)
-# std=(0.2573, 0.2663, 0.2756)
-# Imagenet mean, std
+# Loading data and models
+# Using the mean, std of Imagenet for TuSimple
+# This should be tuned
 mean = (0.485, 0.456, 0.406)
 std = (0.229, 0.224, 0.225)
 transform = Compose(Resize(resize_shape), ToTensor(),
@@ -59,6 +57,7 @@ Dataset_Type = getattr(dataset, dataset_name)
 test_dataset = Dataset_Type(Dataset_Path['Tusimple'], "test", transform)
 test_loader = DataLoader(test_dataset, batch_size=32, collate_fn=test_dataset.collate, num_workers=4)
 
+# Build the SCNN netowrk and load the pretrain model
 net = SCNN(input_size=resize_shape, pretrained=False)
 save_name = os.path.join(exp_dir, exp_dir.split('/')[-1] + '_best.pth')
 save_dict = torch.load(save_name, map_location='cpu')
@@ -67,7 +66,7 @@ net.load_state_dict(save_dict['net'])
 net = torch.nn.DataParallel(net.to(device))
 net.eval()
 
-# ------------ test ------------
+# Starting test
 out_path = os.path.join(exp_dir, "coord_output")
 evaluation_path = os.path.join(exp_dir, "evaluate")
 if not os.path.exists(out_path):
@@ -134,7 +133,7 @@ with open(os.path.join(out_path, "predict_test.json"), "w") as f:
 from utils.lane_evaluation.tusimple.lane import LaneEval
 
 eval_result = LaneEval.bench_one_submit(os.path.join(out_path, "predict_test.json"),
-                                        os.path.join(Dataset_Path['Tusimple'], 'test_label.json'))
+                                        os.path.join(Dataset_Path['TuSimple'], 'test_label.json'))
 print(eval_result)
 with open(os.path.join(evaluation_path, "evaluation_result.txt"), "w") as f:
     print(eval_result, file=f)

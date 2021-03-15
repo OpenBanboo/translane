@@ -1,3 +1,4 @@
+# This code is modified based on https://github.com/harryhan618/SCNN_Pytorch/blob/master/train.py
 import argparse
 import json
 import os
@@ -15,7 +16,7 @@ from utils.tensorboard import TensorBoard
 from utils.transforms import *
 from utils.lr_scheduler import PolyLR
 
-
+# Argument parsing
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp_dir", type=str, default="./experiments/exp0")
@@ -24,24 +25,22 @@ def parse_args():
     return args
 args = parse_args()
 
-# ------------ config ------------
+# Loading configs
 exp_dir = args.exp_dir
 while exp_dir[-1]=='/':
     exp_dir = exp_dir[:-1]
 exp_name = exp_dir.split('/')[-1]
 
-with open(os.path.join(exp_dir, "cfg.json")) as f:
+with open(os.path.join(exp_dir, "modle_config.json")) as f:
     exp_cfg = json.load(f)
 resize_shape = tuple(exp_cfg['dataset']['resize_shape'])
 
 device = torch.device(exp_cfg['device'])
 tensorboard = TensorBoard(exp_dir)
 
-# ------------ train data ------------
-# # CULane mean, std
-# mean=(0.3598, 0.3653, 0.3662)
-# std=(0.2573, 0.2663, 0.2756)
-# Imagenet mean, std
+# Loading data and models
+# Using the mean, std of Imagenet for TuSimple
+# This should be tuned
 mean=(0.485, 0.456, 0.406)
 std=(0.229, 0.224, 0.225)
 transform_train = Compose(Resize(resize_shape), Rotation(2), ToTensor(),
