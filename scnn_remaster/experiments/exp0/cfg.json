@@ -1,25 +1,27 @@
 {
   "device": "cuda:0",
-  "MAX_EPOCHES": 80,
-  "model": "enet_sad",
+  "MAX_EPOCHES": 60,
 
   "dataset": {
     "dataset_name": "TuSimple",
-    "batch_size": 12,
-    "resize_shape": [640, 368]
+    "batch_size": 32,
+    "resize_shape": [512, 288]
   },
-
-  "optim": {
-    "lr": 1e-2,
-    "momentum": 0.9,
-    "weight_decay": 2e-5,
-    "nesterov": true
+  
+  "model": {
+    "scale_exist": 0.07
   },
 
   "lr_scheduler": {
-    "warmup": 50,
-    "max_iter": 60000
+    "warmup": 20,
+    "max_iter": 1500,
+    "min_lrs": 1e-10
   },
-
-  "sad_start_iter": 40000
+  
+  "optim": {
+    "lr": 15e-2,
+    "momentum": 0.9,
+    "weight_decay": 1e-4,
+    "nesterov": true
+  }
 }
