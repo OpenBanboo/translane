@@ -67,13 +67,13 @@ python demo_test.py   -i demo/demo.jpg
 3. Start training:
 
    ```shell
-   python train.py --exp_dir ./experiments/exp0 [--resume/-r]
+   python train_tusimple.py --exp_dir ./experiments/tusimple [--resume/-r]
    ```
 
 4. Monitor on tensorboard:
 
    ```bash
-   tensorboard --logdir='experiments/exp0'
+   tensorboard --logdir='experiments/tusimple'
    ```
 
 **Note**
@@ -91,7 +91,7 @@ python demo_test.py   -i demo/demo.jpg
 * Tusimple Evaluation code is ported from [tusimple repo](https://github.com/TuSimple/tusimple-benchmark/blob/master/evaluate/lane.py).
 
   ```Shell
-  python test_tusimple.py --exp_dir ./experiments/exp0
+  python test_tusimple.py --exp_dir ./experiments/tusimple
   ```
 
 
