@@ -1,15 +1,17 @@
+# Modified based on https://github.com/harryhan618/SCNN_Pytorch/blob/master/demo_test.py
 import argparse
 import cv2
 import torch
 
-from model import SCNN
+from model_scnn import SCNN
 from utils.prob2lines import getLane
 from utils.transforms import *
 
-net = SCNN(input_size=(800, 288), pretrained=False)
-mean=(0.3598, 0.3653, 0.3662) # CULane mean, std
+net = SCNN(input_size=(512, 288), pretrained=False)
+mean=(0.3598, 0.3653, 0.3662) # TuSimple mean, std
 std=(0.2573, 0.2663, 0.2756)
-transform_img = Resize((800, 288))
+# Resize the image for TuSimple format
+transform_img = Resize((512, 288))
 transform_to_net = Compose(ToTensor(), Normalize(mean=mean, std=std))
 
 
@@ -51,7 +53,7 @@ def main():
         if exist_pred[0, i] > 0.5:
             lane_img[coord_mask == (i + 1)] = color[i]
     img = cv2.addWeighted(src1=lane_img, alpha=0.8, src2=img, beta=1., gamma=0.)
-    cv2.imwrite("demo/demo_result.jpg", img)
+    cv2.imwrite("image/demo_result.jpg", img)
 
     for x in getLane.prob2lines_CULane(seg_pred, exist):
         print(x)
