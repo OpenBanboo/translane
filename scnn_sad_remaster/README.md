@@ -104,4 +104,4 @@ The result is located under ./image folder.
 
 ## Acknowledgement
 
-This repos is build based on [official implementation](<https://github.com/XingangPan/SCNN>) and [SCNN_Pytorch](<https://github.com/harryhan618/SCNN_Pytorch/blob/master>).
+This repos is build based on [official implementation](<https://github.com/XingangPan/SCNN>) and [ENet-SAD](<https://github.com/InhwanBae/ENet-SAD_Pytorch>).
