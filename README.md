@@ -11,7 +11,7 @@ TuSimple/
         README.md
         main.py
         evaluate.py
-        translane_demo.ipynb
+        scnn_sad_remaster <- This is the sub-repo for our PyTorch version of remastered SCNN and ENet-SAD models.
         ...
     LaneDetection/
         README.md
