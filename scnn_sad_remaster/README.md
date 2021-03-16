@@ -1,6 +1,7 @@
 # Remaster of SCNN and ENet-SAD in Pytorch
 
 SCNN is a lane detection algorithm, proposed in ['Spatial As Deep: Spatial CNN for Traffic Scene Understanding'](https://arxiv.org/abs/1712.06080). The [official implementation](<https://github.com/XingangPan/SCNN>) is in lua torch.
+ENet-SAD is the lightest algorithm proposed in ['Learning Lightweight Lane Detection CNNs by Self Attention Distillation'](https://arxiv.org/abs/1908.00821). The [official implementation](<https://github.com/cardwing/Codes-for-Lane-Detection>) is in lua torch too.
 
 This repository contains a re-master version in Pytorch.
 
@@ -72,13 +73,15 @@ The result is located under ./image folder.
 3. Start training:
 
    ```shell
-   python train_tusimple.py --exp_dir ./experiments/scnn [--resume/-r]
+   python train_tusimple.py --model scnn --exp_dir ./experiments/scnn [--resume/-r]
+   python train_tusimple.py --model enet_sad --exp_dir ./experiments/enet_sad  [--resume/-r]
    ```
 
 4. Monitor on tensorboard:
 
    ```bash
    tensorboard --logdir='experiments/scnn'
+   tensorboard --logdir='experiments/enet_sad'
    ```
 
 **Note**
@@ -96,7 +99,7 @@ The result is located under ./image folder.
 * Tusimple Evaluation code is ported from [tusimple repo](https://github.com/TuSimple/tusimple-benchmark/blob/master/evaluate/lane.py).
 
   ```Shell
-  python test_tusimple.py --exp_dir ./experiments/scnn
+  python test_tusimple.py --model scnn --exp_dir ./experiments/scnn
   ```
 
 
