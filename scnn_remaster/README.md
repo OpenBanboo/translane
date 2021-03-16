@@ -54,8 +54,8 @@ python demo_test.py   -i image/sample1.jpg
 ```
 
 ![](image/sample4_result.jpg "Custom Sample 4")
-![sample9_result](https://user-images.githubusercontent.com/14226287/111236850-084e8000-85b1-11eb-85c2-dc7ff1e71cee.jpg)
-![sample4_result](https://user-images.githubusercontent.com/14226287/111237011-624f4580-85b1-11eb-8c74-ba453a083020.jpg)
+![](image/sample7_result.jpg "Custom Sample 7")
+![](image/sample9_result.jpg "Custom Sample 9")
 
 
 
