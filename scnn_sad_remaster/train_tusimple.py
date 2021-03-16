@@ -12,14 +12,21 @@ from tqdm import tqdm
 from config import *
 import dataset
 from model_scnn import SCNN
+from model_sad import ENet_SAD
 from utils.tensorboard import TensorBoard
 from utils.transforms import *
 from utils.lr_scheduler import PolyLR
 
-# Argument parsing
+# Preparation for multiprocessing support
+from multiprocessing import Process, JoinableQueue
+from threading import Lock
+import pickle
+
+# Arguments parsing
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--exp_dir", type=str, default="./experiments/exp0")
+    parser.add_argument("--model", type=str, default="scnn")
+    parser.add_argument("--exp_dir", type=str, default="./experiments/scnn")
     parser.add_argument("--resume", "-r", action="store_true")
     args = parser.parse_args()
     return args
@@ -57,8 +64,14 @@ transform_val = Compose(transform_val_img, transform_val_x)
 val_dataset = Dataset_Type(Dataset_Path[dataset_name], "val", transform_val)
 val_loader = DataLoader(val_dataset, batch_size=8, collate_fn=val_dataset.collate, num_workers=4)
 
-# Build the scnn model
-net = SCNN(resize_shape, pretrained=True)
+# Build the scnn/enet-sad model according to the argument
+if args.model == "scnn":
+    net = SCNN(resize_shape, pretrained=True)
+elif args.model == "enet_sad":
+    net = ENet_SAD(resize_shape, sad=True)
+else:
+    raise Exception("Model not match. '--model' in argument should be 'scnn' or 'enet_sad'.")
+# net = SCNN(resize_shape, pretrained=True)
 net = net.to(device) # Put it on GPUT
 net = torch.nn.DataParallel(net)
 
@@ -71,7 +84,7 @@ def train(epoch):
     '''
     Define the training function
     '''
-    print("Train Epoch: {}".format(epoch))
+    print("Training Epoch: {}".format(epoch))
     net.train()
     train_loss = 0
     train_loss_seg = 0
@@ -84,7 +97,17 @@ def train(epoch):
         exist = sample['exist'].to(device)
 
         optimizer.zero_grad()
-        seg_pred, exist_pred, loss_seg, loss_exist, loss = net(img, segLabel, exist)
+
+        if args.model == "scnn":
+            seg_pred, exist_pred, loss_seg, loss_exist, loss = net(img, segLabel, exist)
+        elif args.model == "enet_sad":
+            if (epoch * len(train_loader) + batch_idx) < exp_cfg['sad_start_iter']:
+                seg_pred, exist_pred, loss_seg, loss_exist, loss = net(img, segLabel, exist, False)
+            else:
+                print("ENet-sad activated")
+                seg_pred, exist_pred, loss_seg, loss_exist, loss = net(img, segLabel, exist, True)
+
+
         if isinstance(net, torch.nn.DataParallel):
             loss_seg = loss_seg.sum()
             loss_exist = loss_exist.sum()
@@ -122,7 +145,7 @@ def train(epoch):
         torch.save(save_dict, save_name)
         print("model is saved: {}".format(save_name))
 
-    print("------------------------\n")
+    print("------------------------------------------------\n")
 
 
 def val(epoch):
@@ -189,7 +212,7 @@ def val(epoch):
     tensorboard.scalar_summary("val_loss_exist", val_loss_exist, iter_idx)
     tensorboard.writer.flush()
 
-    print("------------------------\n")
+    print("------------------------------------------------\n")
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         save_name = os.path.join(exp_dir, exp_name + '.pth')

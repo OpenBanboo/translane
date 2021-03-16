@@ -1,4 +1,5 @@
 # This code is modified based on https://github.com/OpenBanboo/translane/blob/main/scnn_remaster/test_tusimple.py
+# by Fang Lin: flin4@stanford.edu
 import argparse
 import json
 import os
@@ -10,13 +11,15 @@ from tqdm import tqdm
 import dataset
 from config import *
 from model_scnn import SCNN
+from model_sad import ENet_SAD
 from utils.prob2lines import getLane
 from utils.transforms import *
 
 # Argument parsing
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--exp_dir", type=str, default="./experiments/exp0")
+    parser.add_argument("--model", type=str, default="scnn")
+    parser.add_argument("--exp_dir", type=str, default="./experiments/scnn")
     args = parser.parse_args()
     return args
 
@@ -58,10 +61,18 @@ test_dataset = Dataset_Type(Dataset_Path['TuSimple'], "test", transform)
 test_loader = DataLoader(test_dataset, batch_size=32, collate_fn=test_dataset.collate, num_workers=4)
 
 # Build the SCNN netowrk and load the pretrain model
-net = SCNN(input_size=resize_shape, pretrained=False)
+# net = SCNN(input_size=resize_shape, pretrained=False)
+# Build the scnn/enet-sad model according to the argument
+if args.model == "scnn":
+    net = SCNN(resize_shape, pretrained=False)
+elif args.model == "enet_sad":
+    net = ENet_SAD(resize_shape, sad=True)
+else:
+    raise Exception("Model not match. '--model' in argument should be 'scnn' or 'enet_sad'.")
+
 save_name = os.path.join(exp_dir, exp_dir.split('/')[-1] + '.pth')
 save_dict = torch.load(save_name, map_location='cpu')
-print("\nloading", save_name, "...... From Epoch: ", save_dict['epoch'])
+print("\nLoading", save_name, "...... From Epoch: ", save_dict['epoch'])
 net.load_state_dict(save_dict['net'])
 net = torch.nn.DataParallel(net.to(device))
 net.eval()
