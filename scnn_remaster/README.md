@@ -53,6 +53,7 @@ python demo_test.py   -i image/sample1.jpg
 ```
 
 ![](demo/demo_result.jpg "demo_result")
+![sample9_result](https://user-images.githubusercontent.com/14226287/111236850-084e8000-85b1-11eb-85c2-dc7ff1e71cee.jpg)
 
 
 
