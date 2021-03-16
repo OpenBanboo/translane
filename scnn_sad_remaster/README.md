@@ -12,6 +12,7 @@ This repository contains a re-master version in Pytorch.
 - 03-14-2021: Remastered SCNN in PyTorch.
 - 03-15-2021: Updated the test and demo codes to adaptive to TuSimple dataset.
 - 03-16-2021: Remastered ENET-SAD in PyTorch.
+- 03-17-2021: Meged sccn and enet_sad into one training and testing script.
 
 <br/>
 
