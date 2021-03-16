@@ -26,14 +26,14 @@ Tusimple_path
 └── test_label.json
 ```
 
-**Note:  seg\_label images and gt.txt, as in CULane dataset format,  will be generated the first time `Tusimple` object is instantiated. It may take some extra time.**
+**Note:  seg\_label images and gt.txt, as in CULane dataset format,  will be generated the first time `Tusimple` object is instantiated. It may take some extra time. Pretrained model can be downloaded from [here](https://drive.google.com/file/d/1_nmyBERjUFY8HmE-RMujK-9bvx_2cRL4/view?usp=sharing)**
 
 
 <br/>
 
 ## Pre-trained Model
 
-* Trained model on Tusimple can be downloaded [here](https://drive.google.com/open?id=1IwEenTekMt-t6Yr5WJU9_kv4d_Pegd_Q). Its configure file is in `exp0`.
+* Trained model on TuSimple can be downloaded [here](https://drive.google.com/open?id=1IwEenTekMt-t6Yr5WJU9_kv4d_Pegd_Q). Its configure file is in `exp0`.
 
 | Accuracy | FP   | FN   |
 | -------- | ---- | ---- |
@@ -48,9 +48,9 @@ Tusimple_path
 For single image demo test:
 
 ```shell
-python demo_test.py   -i image/sample1.jpg 
-                      -w experiments/tusimple/tusimple_best.pth
-                      [--visualize / -v]
+python demo_tusimple.py   -i image/sample1.jpg 
+                          -w experiments/tusimple/tusimple_best.pth
+                          [--visualize / -v]
 ```
 
 ![](image/sample4_result.jpg "Custom Sample 4")
