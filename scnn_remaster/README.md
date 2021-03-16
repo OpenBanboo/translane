@@ -26,7 +26,7 @@ Tusimple_path
 └── test_label.json
 ```
 
-**Note:  seg\_label images and gt.txt, as in CULane dataset format,  will be generated the first time `Tusimple` object is instantiated. It may take some extra time.**
+**Note:  seg\_label images and gt.txt, as in CULane dataset format,  will be generated the first time `Tusimple` object is instantiated. It may take some extra time. Pretrained model can be downloaded from [here](https://drive.google.com/file/d/1_nmyBERjUFY8HmE-RMujK-9bvx_2cRL4/view?usp=sharing)**
 
 
 <br/>
