@@ -25,7 +25,7 @@ args = parse_args()
 exp_dir = args.exp_dir
 exp_name = exp_dir.split('/')[-1]
 
-with open(os.path.join(exp_dir, "modle_config.json")) as f:
+with open(os.path.join(exp_dir, "model_config.json")) as f:
     exp_cfg = json.load(f)
 resize_shape = tuple(exp_cfg['dataset']['resize_shape'])
 device = torch.device('cuda') # put on GPU
@@ -59,7 +59,7 @@ test_loader = DataLoader(test_dataset, batch_size=32, collate_fn=test_dataset.co
 
 # Build the SCNN netowrk and load the pretrain model
 net = SCNN(input_size=resize_shape, pretrained=False)
-save_name = os.path.join(exp_dir, exp_dir.split('/')[-1] + '_best.pth')
+save_name = os.path.join(exp_dir, exp_dir.split('/')[-1] + '.pth')
 save_dict = torch.load(save_name, map_location='cpu')
 print("\nloading", save_name, "...... From Epoch: ", save_dict['epoch'])
 net.load_state_dict(save_dict['net'])

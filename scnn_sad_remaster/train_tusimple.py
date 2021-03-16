@@ -31,7 +31,7 @@ while exp_dir[-1]=='/':
     exp_dir = exp_dir[:-1]
 exp_name = exp_dir.split('/')[-1]
 
-with open(os.path.join(exp_dir, "modle_config.json")) as f:
+with open(os.path.join(exp_dir, "model_config.json")) as f:
     exp_cfg = json.load(f)
 resize_shape = tuple(exp_cfg['dataset']['resize_shape'])
 
