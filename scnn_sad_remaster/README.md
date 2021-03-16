@@ -1,4 +1,4 @@
-# Remaster of SCNN and ENET-SAD in Pytorch
+# Remaster of SCNN and ENet-SAD in Pytorch
 
 SCNN is a lane detection algorithm, proposed in ['Spatial As Deep: Spatial CNN for Traffic Scene Understanding'](https://arxiv.org/abs/1712.06080). The [official implementation](<https://github.com/XingangPan/SCNN>) is in lua torch.
 
