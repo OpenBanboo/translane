@@ -1,6 +1,7 @@
 # Remaster of SCNN and ENet-SAD in Pytorch
 
 SCNN is a lane detection algorithm, proposed in ['Spatial As Deep: Spatial CNN for Traffic Scene Understanding'](https://arxiv.org/abs/1712.06080). The [official implementation](<https://github.com/XingangPan/SCNN>) is in lua torch.
+
 ENet-SAD is the lightest algorithm proposed in ['Learning Lightweight Lane Detection CNNs by Self Attention Distillation'](https://arxiv.org/abs/1908.00821). The [official implementation](<https://github.com/cardwing/Codes-for-Lane-Detection>) is in lua torch too.
 
 This repository contains a re-master version in Pytorch.
@@ -13,6 +14,7 @@ This repository contains a re-master version in Pytorch.
 - 03-15-2021: Updated the test and demo codes to adaptive to TuSimple dataset.
 - 03-16-2021: Remastered ENET-SAD in PyTorch.
 - 03-17-2021: Meged sccn and enet_sad into one training and testing script.
+- 03-18-2021: Uploaded the pre-trained model.
 
 <br/>
 
