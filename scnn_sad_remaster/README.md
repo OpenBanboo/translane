@@ -49,9 +49,9 @@ For single image demo test:
 
 ```shell
 python demo_tusimple.py   -i image/sample1.jpg 
-                          -w experiments/tusimple/tusimple_best.pth
-                          [--visualize / -v]
+                          -w experiments/scnn/scnn.pth
 ```
+The result is located under ./image folder.
 
 ![](image/sample4_result.jpg "Custom Sample 4")
 ![](image/sample7_result.jpg "Custom Sample 7")
@@ -64,20 +64,20 @@ python demo_tusimple.py   -i image/sample1.jpg
 
 ## Train 
 
-1. Specify an experiment directory, e.g. `experiments/tusimple`. 
+1. Specify an experiment directory, e.g. `experiments/scnn` or `experiments/sad`. 
 
-2. Modify the hyperparameters in `experiments/tusimple/modle_config.json`.
+2. Modify the hyperparameters in `experiments/scnn/modle_config.json`.
 
 3. Start training:
 
    ```shell
-   python train_tusimple.py --exp_dir ./experiments/tusimple [--resume/-r]
+   python train_tusimple.py --exp_dir ./experiments/scnn [--resume/-r]
    ```
 
 4. Monitor on tensorboard:
 
    ```bash
-   tensorboard --logdir='experiments/tusimple'
+   tensorboard --logdir='experiments/scnn'
    ```
 
 **Note**
@@ -95,7 +95,7 @@ python demo_tusimple.py   -i image/sample1.jpg
 * Tusimple Evaluation code is ported from [tusimple repo](https://github.com/TuSimple/tusimple-benchmark/blob/master/evaluate/lane.py).
 
   ```Shell
-  python test_tusimple.py --exp_dir ./experiments/tusimple
+  python test_tusimple.py --exp_dir ./experiments/scnn
   ```
 
 
