@@ -9,6 +9,7 @@ This repository contains a re-master version in Pytorch.
 ### Updates
 
 - 03-14-2021: Remastered SCNN in PyTorch.
+- 03-15-2021: Updated the test and demo codes to adaptive to TuSimple dataset.
 
 <br/>
 
