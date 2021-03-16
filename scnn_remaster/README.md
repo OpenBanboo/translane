@@ -54,7 +54,8 @@ python demo_test.py   -i image/sample1.jpg
 ```
 
 ![](demo/demo_result.jpg "demo_result")
-![sample9_result](https://user-images.githubusercontent.com/14226287/111236850-084e8000-85b1-11eb-85c2-dc7ff1e71cee.jpg)
+![sample9_result](https://user-images.githubusercontent.com/14226287/111236850-084e8000-85b1-11eb-85c2-dc7ff1e71cee.jpg)![sample4_result](https://user-images.githubusercontent.com/14226287/111237011-624f4580-85b1-11eb-8c74-ba453a083020.jpg)
+
 
 
 
@@ -62,9 +63,9 @@ python demo_test.py   -i image/sample1.jpg
 
 ## Train 
 
-1. Specify an experiment directory, e.g. `experiments/exp0`. 
+1. Specify an experiment directory, e.g. `experiments/tusimple`. 
 
-2. Modify the hyperparameters in `experiments/exp0/cfg.json`.
+2. Modify the hyperparameters in `experiments/tusimple/modle_config.json`.
 
 3. Start training:
 
