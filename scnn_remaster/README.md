@@ -48,9 +48,9 @@ Tusimple_path
 For single image demo test:
 
 ```shell
-python demo_test.py   -i image/sample1.jpg 
-                      -w experiments/tusimple/tusimple_best.pth
-                      [--visualize / -v]
+python demo_tusimple.py   -i image/sample1.jpg 
+                          -w experiments/tusimple/tusimple_best.pth
+                          [--visualize / -v]
 ```
 
 ![](image/sample4_result.jpg "Custom Sample 4")
