@@ -1,23 +1,27 @@
 # Modified based on https://github.com/harryhan618/SCNN_Pytorch/blob/master/demo_test.py
 import argparse
+import json
+import os
 import cv2
 import torch
-
+from model_sad import ENet_SAD
 from model_scnn import SCNN
 from utils.prob2lines import getLane
 from utils.transforms import *
 
-net = SCNN(input_size=(512, 288), pretrained=False)
-mean=(0.3598, 0.3653, 0.3662) # TuSimple mean, std
-std=(0.2573, 0.2663, 0.2756)
-# Resize the image for TuSimple format
-transform_img = Resize((512, 288))
-transform_to_net = Compose(ToTensor(), Normalize(mean=mean, std=std))
+# net = SCNN(input_size=(512, 288), pretrained=False)
+# mean=(0.3598, 0.3653, 0.3662) # TuSimple mean, std
+# std=(0.2573, 0.2663, 0.2756)
+# # Resize the image for TuSimple format
+# transform_img = Resize((512, 288))
+# transform_to_net = Compose(ToTensor(), Normalize(mean=mean, std=std))
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--img_path", '-i', type=str, default="demo/demo.jpg", help="Path to demo img")
+    parser.add_argument("--model", '-m', type=str, default="scnn")
+    parser.add_argument("--img_path", '-i', type=str, default="image/sample1.jpg", help="Path to custom demo img")
+    parser.add_argument("--exp_dir", '-e', type=str, default="./experiments/scnn")
     parser.add_argument("--weight_path", '-w', type=str, help="Path to model weights")
     parser.add_argument("--visualize", '-v', action="store_true", default=False, help="Visualize the result")
     args = parser.parse_args()
@@ -25,9 +29,34 @@ def parse_args():
 
 
 def main():
+
+    # ------------ Arguments parsing ------------
     args = parse_args()
     img_path = args.img_path
     weight_path = args.weight_path
+    exp_dir = args.exp_dir
+    while exp_dir[-1]=='/':
+        exp_dir = exp_dir[:-1]
+    exp_name = exp_dir.split('/')[-1]
+
+    with open(os.path.join(exp_dir, "model_config.json")) as f:
+        exp_cfg = json.load(f)
+    resize_shape = tuple(exp_cfg['dataset']['resize_shape'])
+
+    # net = SCNN(input_size=(512, 288), pretrained=False)
+    # ------------ preparation ------------
+    if args.model == "scnn":
+        net = SCNN(resize_shape, pretrained=False)
+    elif args.model == "enet_sad":
+        net = ENet_SAD(resize_shape, sad=True)
+    else:
+        raise Exception("Model not match. 'model' in 'model_config.json' should be 'scnn' or 'enet_sad'.")
+
+    mean=(0.3598, 0.3653, 0.3662) # TuSimple mean, std
+    std=(0.2573, 0.2663, 0.2756)
+    # Resize the image for TuSimple format
+    transform_img = Resize(resize_shape)
+    transform_to_net = Compose(ToTensor(), Normalize(mean=mean, std=std))
 
     img = cv2.imread(img_path)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
