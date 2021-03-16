@@ -12,6 +12,7 @@ This repository contains a re-master version in Pytorch.
 - 03-14-2021: Remastered SCNN in PyTorch.
 - 03-15-2021: Updated the test and demo codes to adaptive to TuSimple dataset.
 - 03-16-2021: Remastered ENET-SAD in PyTorch.
+- 03-17-2021: Meged sccn and enet_sad into one training and testing script.
 
 <br/>
 
@@ -50,8 +51,14 @@ Tusimple_path
 For single image demo test:
 
 ```shell
-python demo_tusimple.py   -i image/sample1.jpg 
-                          -w experiments/scnn/scnn.pth
+python demo_image.py -m scnn 
+                     -i image/sample1.jpg 
+                     -e experiments/scnn 
+                     -w experiments/scnn/scnn.pth
+python demo_image.py -m enet_sad 
+                     -i image/sample1.jpg 
+                     -e experiments/enet_sad 
+                     -w experiments/enet_sad/enet_sad.pth
 ```
 The result is located under ./image folder.
 
