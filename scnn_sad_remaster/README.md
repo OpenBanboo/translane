@@ -38,10 +38,10 @@ Tusimple_path
 
 * Trained model on TuSimple can be downloaded [here](https://drive.google.com/open?id=1IwEenTekMt-t6Yr5WJU9_kv4d_Pegd_Q). Its configure file is in `exp0`.
 
-| Accuracy | FP   | FN   |
-| -------- | ---- | ---- |
-| 94.16%   |0.0735|0.0825|
-
+|   Model  | Accuracy |   FP   |   FN   |
+| -------- | -------- | ------ | ------ |
+|   SCNN   |  94.16%  | 0.0735 | 0.0825 |
+| ENET-SAD |  96.64%  | 0.0602 | 0.0205 |
 
 <br/>
 
@@ -62,9 +62,9 @@ python demo_image.py -m enet_sad
 ```
 The result is located under ./image folder.
 
-![](image/sample4_result.jpg "Custom Sample 4")
-![](image/sample7_result.jpg "Custom Sample 7")
-![](image/sample9_result.jpg "Custom Sample 9")
+![](image/scnn_result/sample4_result.jpg "Custom Sample 4")
+![](image/scnn_result/sample7_result.jpg "Custom Sample 7")
+![](image/scnn_result/sample9_result.jpg "Custom Sample 9")
 
 
 
@@ -94,7 +94,7 @@ The result is located under ./image folder.
 **Note**
 
 
-- My model is trained with `torch.nn.DataParallel`. Modify it according to your hardware configuration.
+- Modify the model trainer according to your hardware configuration.
 - Using the backbone is vgg16 from torchvision. Several modifications are done to the torchvision model according to paper, i.e., i). dilation of last three conv layer is changed to 2, ii). last two maxpooling layer is removed.
 
 
