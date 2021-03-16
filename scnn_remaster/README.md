@@ -47,8 +47,8 @@ Tusimple_path
 For single image demo test:
 
 ```shell
-python demo_test.py   -i demo/demo.jpg 
-                      -w experiments/vgg_SCNN_DULR_w9/vgg_SCNN_DULR_w9.pth 
+python demo_test.py   -i image/sample1.jpg 
+                      -w experiments/tusimple/tusimple_best.pth
                       [--visualize / -v]
 ```
 
