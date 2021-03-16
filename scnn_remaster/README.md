@@ -33,7 +33,7 @@ Tusimple_path
 
 ## Pre-trained Model
 
-* Trained model on Tusimple can be downloaded [here](https://drive.google.com/open?id=1IwEenTekMt-t6Yr5WJU9_kv4d_Pegd_Q). Its configure file is in `exp0`.
+* Trained model on TuSimple can be downloaded [here](https://drive.google.com/open?id=1IwEenTekMt-t6Yr5WJU9_kv4d_Pegd_Q). Its configure file is in `exp0`.
 
 | Accuracy | FP   | FN   |
 | -------- | ---- | ---- |
