@@ -51,8 +51,14 @@ Tusimple_path
 For single image demo test:
 
 ```shell
-python demo_tusimple.py   -i image/sample1.jpg 
-                          -w experiments/scnn/scnn.pth
+python demo_image.py -m scnn 
+                     -i image/sample1.jpg 
+                     -e experiments/scnn 
+                     -w experiments/scnn/scnn.pth
+python demo_image.py -m enet_sad 
+                     -i image/sample1.jpg 
+                     -e experiments/enet_sad 
+                     -w experiments/enet_sad/enet_sad.pth
 ```
 The result is located under ./image folder.
 
