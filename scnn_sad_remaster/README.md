@@ -75,6 +75,10 @@ python demo_video.py -i video/demo1.MOV -w experiments/scnn/scnn.pth -e experime
 ```
 
 
+https://user-images.githubusercontent.com/14226287/111417407-0a910700-86a3-11eb-9609-98db5cf40535.mov
+
+
+
 <br/>
 
 ## Train 
