@@ -3,6 +3,8 @@
   "MAX_EPOCHES": 80,
   "model": "enet_sad",
 
+  "sad_start_iter": 40000,
+
   "dataset": {
     "dataset_name": "TuSimple",
     "batch_size": 8,
@@ -19,7 +21,5 @@
   "lr_scheduler": {
     "warmup": 50,
     "max_iter": 60000
-  },
-
-  "sad_start_iter": 40000
+  }
 }
