@@ -9,14 +9,6 @@ from model_scnn import SCNN
 from utils.prob2lines import getLane
 from utils.transforms import *
 
-# net = SCNN(input_size=(512, 288), pretrained=False)
-# mean=(0.3598, 0.3653, 0.3662) # TuSimple mean, std
-# std=(0.2573, 0.2663, 0.2756)
-# # Resize the image for TuSimple format
-# transform_img = Resize((512, 288))
-# transform_to_net = Compose(ToTensor(), Normalize(mean=mean, std=std))
-
-
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", '-m', type=str, default="scnn")

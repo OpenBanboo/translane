@@ -71,7 +71,6 @@ elif args.model == "enet_sad":
     net = ENet_SAD(resize_shape, sad=True)
 else:
     raise Exception("Model not match. '--model' in argument should be 'scnn' or 'enet_sad'.")
-# net = SCNN(resize_shape, pretrained=True)
 net = net.to(device) # Put it on GPUT
 net = torch.nn.DataParallel(net)
 
