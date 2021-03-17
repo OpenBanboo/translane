@@ -69,6 +69,10 @@ The result is located under ./image folder.
 ![](image/scnn_result/sample9_result.jpg "Custom Sample 9")
 
 
+For customized video demo:
+```
+python demo_video.py -i video/demo1.MOV -w experiments/scnn/scnn.pth -e experiments/scnn/ -v
+```
 
 
 <br/>
