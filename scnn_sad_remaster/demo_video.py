@@ -1,9 +1,10 @@
 import argparse
 import cv2
 import torch
-
+import os
+import json
 from model_scnn import SCNN
-from model_ENET_SAD import ENet_SAD
+from model_sad import ENet_SAD
 from utils.prob2lines import getLane
 from utils.transforms import *
 
@@ -11,16 +12,16 @@ import time
 from multiprocessing import Process, JoinableQueue, SimpleQueue
 from threading import Lock
 
-#img_size = (640, 360)
-img_size = (1280, 720)
-#net = SCNN(input_size=(800, 288), pretrained=False)
-net = ENet_SAD(img_size, sad=False)
-# CULane mean, std
-mean=(0.3598, 0.3653, 0.3662)
-std=(0.2573, 0.2663, 0.2756)
-# Imagenet mean, std
-# mean=(0.485, 0.456, 0.406)
-# std=(0.229, 0.224, 0.225)
+# #img_size = (640, 360)
+img_size = (512, 288)
+# net = SCNN(input_size=img_size, pretrained=False)
+# #net = ENet_SAD(img_size, sad=False)
+# # CULane mean, std
+# mean=(0.3598, 0.3653, 0.3662)
+# std=(0.2573, 0.2663, 0.2756)
+# # Imagenet mean, std
+mean=(0.485, 0.456, 0.406)
+std=(0.229, 0.224, 0.225)
 transform_img = Resize(img_size)
 transform_to_net = Compose(ToTensor(), Normalize(mean=mean, std=std))
 
@@ -28,8 +29,10 @@ pipeline = False
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--video_path", '-i', type=str, default="demo/d193a8a5-9df343d6.mov", help="Path to demo video")
-    parser.add_argument("--weight_path", '-w', type=str, default="experiments/exp2_BDD100K_ENet+ENet-SAD/exp2_best.pth", help="Path to model weights")
+    parser.add_argument("--model", type=str, default="scnn")
+    parser.add_argument("--exp_dir", '-e', type=str, default="./experiments/scnn")
+    parser.add_argument("--video_path", '-i', type=str, default="video/demo.MOV", help="Path to demo video")
+    parser.add_argument("--weight_path", '-w', type=str, default="experiments/scnn/scnn.pth", help="Path to model weights")
     parser.add_argument("--visualize", '-v', action="store_true", default=False, help="Visualize the result")
     args = parser.parse_args()
     return args
@@ -91,8 +94,8 @@ def post_processor(arg):
             if arg_visualize:
                 frame = x.squeeze().permute(1, 2, 0).numpy()
                 img = visualize(frame, seg_pred, exist_pred)
-                cv2.imshow('input_video', frame)
-                cv2.imshow("output_video", img)
+                #cv2.imshow('input_video', frame)
+                #cv2.imshow("output_video", img)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -105,6 +108,30 @@ def main():
     args = parse_args()
     video_path = args.video_path
     weight_path = args.weight_path
+
+    # Loading configs
+    exp_dir = args.exp_dir
+    while exp_dir[-1]=='/':
+        exp_dir = exp_dir[:-1]
+    exp_name = exp_dir.split('/')[-1]
+
+    with open(os.path.join(exp_dir, "model_config.json")) as f:
+        exp_cfg = json.load(f)
+    resize_shape = tuple(exp_cfg['dataset']['resize_shape'])
+
+    # Build the scnn/enet-sad model according to the argument
+    if args.model == "scnn":
+        net = SCNN(resize_shape, pretrained=True)
+    elif args.model == "enet_sad":
+        net = ENet_SAD(resize_shape, sad=True)
+    else:
+        raise Exception("Model not match. '--model' in argument should be 'scnn' or 'enet_sad'.")
+
+    mean=(0.485, 0.456, 0.406)
+    std=(0.229, 0.224, 0.225)
+    # Resize the image for TuSimple format
+    transform_img = Resize(resize_shape)
+    transform_to_net = Compose(ToTensor(), Normalize(mean=mean, std=std))
 
     if pipeline:
         input_queue = JoinableQueue()
@@ -121,6 +148,10 @@ def main():
     net.load_state_dict(save_dict['net'])
     net.eval()
     net.cuda()
+
+    result = cv2.VideoWriter('video/demo.avi',  
+                         cv2.VideoWriter_fourcc(*'MJPG'), 
+                         30, resize_shape)
 
     while True:
         if pipeline:
@@ -144,7 +175,7 @@ def main():
 
             if ret:
                 loop_start = time.time()
-                frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+                #frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
                 frame = transform_img({'img': frame})['img']
                 img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 x = transform_to_net({'img': img})['img']
@@ -167,8 +198,9 @@ def main():
 
                 if args.visualize:
                     img = visualize(img, seg_pred, exist_pred)
-                    cv2.imshow('input_video', frame)
-                    cv2.imshow("output_video", img)
+                    #cv2.imshow('input_video', frame)
+                    #cv2.imshow("output_video", img)
+                    result.write(img)
 
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
@@ -178,6 +210,7 @@ def main():
         print("gpu_runtime:", gpu_end - gpu_start, "FPS:", int(1 / (gpu_end - gpu_start)))
         print("total_runtime:", loop_end - loop_start, "FPS:", int(1 / (loop_end - loop_start)))
 
+    result.release()
     cv2.destroyAllWindows()
 
 
