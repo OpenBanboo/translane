@@ -62,7 +62,3 @@ Note that, we've put 9 selected customized images captured from San Jose, Califo
 The output of the model with predited lane marks can be found under ./detections folder.
 (ex.)
 ![sample9](https://user-images.githubusercontent.com/14226287/109436557-e9f35c80-79d4-11eb-9889-4ed241cd779e.jpg)
-
-
-[TransLane Demo](https://drive.google.com/file/d/1zgV-EXYyKBTQJdlDVbsFBsqWFI1jO231/view?usp=sharing)
-
