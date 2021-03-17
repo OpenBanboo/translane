@@ -74,8 +74,10 @@ For customized video demo:
 python demo_video.py -i video/demo1.MOV -w experiments/scnn/scnn.pth -e experiments/scnn/ -v
 ```
 
+[Video Demo1](https://user-images.githubusercontent.com/14226287/111417407-0a910700-86a3-11eb-9609-98db5cf40535.mov)
+[Video Demo2](https://user-images.githubusercontent.com/14226287/111417761-c0f4ec00-86a3-11eb-8e14-36381f51e358.mov)
 
-https://user-images.githubusercontent.com/14226287/111417407-0a910700-86a3-11eb-9609-98db5cf40535.mov
+
 
 
 
