@@ -128,6 +128,10 @@ def train(epoch):
         tensorboard.scalar_summary(exp_name + "/train_loss_seg", train_loss_seg, iter_idx)
         tensorboard.scalar_summary(exp_name + "/train_loss_exist", train_loss_exist, iter_idx)
         tensorboard.scalar_summary(exp_name + "/learning_rate", lr, iter_idx)
+        print(exp_name + "/train_loss", train_loss, iter_idx)
+        print(exp_name + "/train_loss_seg", train_loss_seg, iter_idx)
+        print(exp_name + "/train_loss_exist", train_loss_exist, iter_idx)
+        print(exp_name + "/learning_rate", lr, iter_idx)
 
     progressbar.close()
     tensorboard.writer.flush()

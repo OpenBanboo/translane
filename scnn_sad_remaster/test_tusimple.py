@@ -129,8 +129,9 @@ with torch.no_grad():
                 json_dict['lanes'].append([])
                 for (x, y) in l:
                     json_dict['lanes'][-1].append(int(x))
-            for (x, y) in lane_coords[0]:
-                json_dict['h_sample'].append(y)
+            if len(lane_coords) != 0:
+                for (x, y) in lane_coords[0]:
+                    json_dict['h_sample'].append(y)
             dump_to_json.append(json.dumps(json_dict))
 
         progressbar.update(1)

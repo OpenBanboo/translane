@@ -1,1 +1,1 @@
-[{"name": "Accuracy", "value": 0.8641842970113988, "order": "desc"}, {"name": "FP", "value": 0.29753774263120125, "order": "asc"}, {"name": "FN", "value": 0.3248262640786014, "order": "asc"}]
+[{"name": "Accuracy", "value": 0.8399495267193855, "order": "desc"}, {"name": "FP", "value": 0.2805236041217354, "order": "asc"}, {"name": "FN", "value": 0.3414509944883778, "order": "asc"}]
