@@ -38,7 +38,7 @@ Tusimple_path
 
 ## Pre-trained Model
 
-* Trained model on TuSimple can be downloaded [SCNN](https://drive.google.com/file/d/1grNvmVZVq70YSWl0lnEFhntGiuQ_ag1n/view?usp=sharing) and [ENet_SAD](https://drive.google.com/open?id=1IwEenTekMt-t6Yr5WJU9_kv4d_Pegd_Q). Its configure file is in `experiment/scnn`.
+* Trained model on TuSimple can be downloaded [SCNN](https://drive.google.com/file/d/1grNvmVZVq70YSWl0lnEFhntGiuQ_ag1n/view?usp=sharing) and [ENet_SAD](https://drive.google.com/file/d/1b1j-8jzApF4P7czVKlAzJPPa6DnHlRTn/view?usp=sharing). Its configure file is in `experiment/scnn`.
 
 |   Model  | Accuracy |   FP   |   FN   |
 | -------- | -------- | ------ | ------ |
